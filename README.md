@@ -29,7 +29,7 @@ Una app con **dos partes**:
 - **Modo niña:** se ve y se usa como YouTube (video arriba, miniaturas abajo para cambiar), sin
   anuncios ni enlaces hacia afuera. Muestra dos secciones: **"Para ti"** (recomendaciones de la
   cuenta de YouTube Music, con internet) y **"En el celular"** (canciones guardadas, funcionan
-  sin internet). El cuidador puede apagar "Para ti".
+  sin internet). "Para ti" viene apagado; el cuidador lo enciende en Ajustes.
 - **Zona de descargas (cuidador, con PIN):** el cuidador inicia sesión con su cuenta de Google,
   ve su biblioteca y sus "me gusta" de YouTube Music y descarga al celular las canciones que
   quiera. También puede agregar una carpeta con videos ya descargados por otros medios.

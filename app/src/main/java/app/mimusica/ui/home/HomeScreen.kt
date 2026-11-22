@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -160,11 +161,38 @@ fun HomeScreen(
                 ) {
                     section("para-ti", Icons.Filled.AutoAwesome, "Para ti", recommended, currentId, onPlay)
                     section("celular", Icons.Filled.PhoneAndroid, "En el celular", downloaded, currentId, onPlay)
+                    endlessTail(recommended + downloaded, currentId, onPlay)
                 }
             }
         }
     }
 }
+
+/**
+ * Feed infinito, como YouTube: al terminar las secciones, las mismas canciones se repiten en
+ * el mismo orden sin fin (la niña desliza hacia arriba sin parar; si la lista se acabara,
+ * sentiría que la app no funciona). Es una lista perezosa: solo se dibujan las tarjetas
+ * visibles, así que casi un millón de elementos no gastan memoria.
+ */
+private fun LazyGridScope.endlessTail(
+    pool: List<PlayableItem>,
+    currentId: String?,
+    onPlay: (List<PlayableItem>, Int) -> Unit,
+) {
+    if (pool.isEmpty()) return
+    items(count = ENDLESS_COUNT, key = { i -> "repetir-$i" }) { i ->
+        val index = i % pool.size
+        val item = pool[index]
+        VideoCard(
+            item = item,
+            isCurrent = item.id == currentId,
+            onClick = { onPlay(pool, index) },
+        )
+    }
+}
+
+/** Cantidad "infinita" de tarjetas repetidas (nadie llega al final deslizando). */
+private const val ENDLESS_COUNT = 1_000_000
 
 private fun LazyGridScope.section(
     key: String,

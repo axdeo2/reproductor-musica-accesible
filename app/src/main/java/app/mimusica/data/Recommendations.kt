@@ -20,7 +20,7 @@ interface RecommendationsSource {
 class ChildSettings(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("ajustes_nina", Context.MODE_PRIVATE)
 
-    private val _showRecommendations = MutableStateFlow(prefs.getBoolean(KEY_RECS, true))
+    private val _showRecommendations = MutableStateFlow(prefs.getBoolean(KEY_RECS, false))
     val showRecommendations: StateFlow<Boolean> = _showRecommendations.asStateFlow()
 
     fun setShowRecommendations(value: Boolean) {
