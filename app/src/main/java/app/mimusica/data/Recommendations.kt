@@ -28,7 +28,17 @@ class ChildSettings(context: Context) {
         _showRecommendations.value = value
     }
 
+    /** Modo oscuro (por defecto la app usa modo claro). */
+    private val _darkTheme = MutableStateFlow(prefs.getBoolean(KEY_DARK, false))
+    val darkTheme: StateFlow<Boolean> = _darkTheme.asStateFlow()
+
+    fun setDarkTheme(value: Boolean) {
+        prefs.edit().putBoolean(KEY_DARK, value).apply()
+        _darkTheme.value = value
+    }
+
     private companion object {
         const val KEY_RECS = "mostrar_para_ti"
+        const val KEY_DARK = "tema_oscuro"
     }
 }

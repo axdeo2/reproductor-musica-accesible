@@ -162,7 +162,7 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Mostrar \"Para ti\" en el modo niña", color = Colores.Blanco)
+                Text("Mostrar \"Para ti\" en el modo niña", color = Colores.Texto)
                 Text(
                     "Recomendaciones de la cuenta, reproducidas con internet (sin anuncios).",
                     color = Colores.Gris,
@@ -175,6 +175,21 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
                     container.childSettings.setShowRecommendations(it)
                     scope.launch { container.recommendations.refresh(force = true) }
                 },
+                colors = SwitchDefaults.colors(checkedTrackColor = Colores.Rojo),
+            )
+        }
+
+        val darkTheme by container.childSettings.darkTheme.collectAsState()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.Separacion),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Tema oscuro", color = Colores.Texto, modifier = Modifier.weight(1f))
+            Switch(
+                checked = darkTheme,
+                onCheckedChange = { container.childSettings.setDarkTheme(it) },
                 colors = SwitchDefaults.colors(checkedTrackColor = Colores.Rojo),
             )
         }
@@ -240,11 +255,11 @@ private fun Header(title: String, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(Dimens.TocableMinimo)) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Colores.Blanco)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Colores.Texto)
         }
         Text(
             title,
-            color = Colores.Blanco,
+            color = Colores.Texto,
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -274,7 +289,7 @@ private fun AccountRow(signedIn: Boolean, onSignIn: () -> Unit, onSignOut: () ->
     ) {
         Text(
             if (signedIn) "Sesión de Google iniciada" else "Sin sesión de Google",
-            color = Colores.Blanco,
+            color = Colores.Texto,
             modifier = Modifier.weight(1f),
         )
         if (signedIn) {
@@ -365,7 +380,7 @@ private fun TrackRow(track: RemoteTrack, state: DownloadState?, onDownload: () -
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(track.title, color = Colores.Blanco, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.title, color = Colores.Texto, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOfNotNull(track.artists.takeIf { it.isNotBlank() }, track.durationText).joinToString(" · "),
                 color = Colores.Gris,
@@ -390,7 +405,7 @@ private fun TrackRow(track: RemoteTrack, state: DownloadState?, onDownload: () -
                     Icon(Icons.Filled.ErrorOutline, "Reintentar", tint = Colores.Rojo)
                 }
                 null -> IconButton(onClick = onDownload) {
-                    Icon(Icons.Filled.Download, "Descargar", tint = Colores.Blanco)
+                    Icon(Icons.Filled.Download, "Descargar", tint = Colores.Texto)
                 }
             }
         }
@@ -418,9 +433,9 @@ private fun PlaylistList(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = Colores.Blanco)
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = Colores.Texto)
                 Column(Modifier.weight(1f)) {
-                    Text(p.title, color = Colores.Blanco, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(p.title, color = Colores.Texto, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     p.subtitle?.let {
                         Text(it, color = Colores.Gris, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -443,7 +458,7 @@ private fun SavedList(items: List<DownloadedItem>, onDelete: (DownloadedItem) ->
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(item.title, color = Colores.Blanco, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(item.title, color = Colores.Texto, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(item.artists, color = Colores.Gris, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
                 IconButton(onClick = { onDelete(item) }, modifier = Modifier.size(Dimens.TocableMinimo)) {

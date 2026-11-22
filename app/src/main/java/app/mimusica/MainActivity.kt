@@ -26,7 +26,8 @@ import app.mimusica.data.toPlayable
 import app.mimusica.playback.SimplePlayer
 import app.mimusica.ui.caregiver.CaregiverScreen
 import app.mimusica.ui.home.HomeScreen
-import app.mimusica.ui.theme.Colores
+import app.mimusica.ui.theme.PaletaClara
+import app.mimusica.ui.theme.PaletaOscura
 import app.mimusica.ui.theme.MiMusicaTheme
 
 /**
@@ -40,8 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val barra = SystemBarStyle.dark(Colores.Fondo.toArgb())
-        enableEdgeToEdge(statusBarStyle = barra, navigationBarStyle = barra)
+        applySystemBars(dark = false)
 
         val container = (application as MusicApp).container
         val library = container.localLibrary
@@ -56,7 +56,9 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            MiMusicaTheme {
+            val dark by container.childSettings.darkTheme.collectAsState()
+            LaunchedEffect(dark) { applySystemBars(dark) }
+            MiMusicaTheme(dark = dark) {
                 var caregiver by rememberSaveable { mutableStateOf(false) }
                 var fullscreen by rememberSaveable { mutableStateOf(false) }
                 val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -132,6 +134,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Barras del sistema del color del fondo, con íconos legibles en modo claro u oscuro. */
+    private fun applySystemBars(dark: Boolean) {
+        val style = if (dark) SystemBarStyle.dark(PaletaOscura.fondo.toArgb())
+        else SystemBarStyle.light(PaletaClara.fondo.toArgb(), PaletaOscura.fondo.toArgb())
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+    }
+
     /** Horizontal y sin barras del sistema (deslizar desde el borde las muestra un momento). */
     private fun enterFullscreen() {
         portraitRelease?.disable()
@@ -162,6 +171,12 @@ class MainActivity : ComponentActivity() {
             if (it.canDetectOrientation()) it.enable()
             else requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Al volver a la app se revisa de nuevo si hay internet.
+        (application as MusicApp).container.connectivity.refresh()
     }
 
     override fun onDestroy() {

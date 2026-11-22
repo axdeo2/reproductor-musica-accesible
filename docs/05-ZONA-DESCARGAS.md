@@ -82,12 +82,14 @@ Tamaño aproximado por canción de 4 minutos: audio ~4 MB; video 480p ~15–25 M
   el audio con la miniatura); la canción completa tiene 25 s antes de saltar a la siguiente; los
   enlaces de la siguiente canción se piden mientras suena la actual; el generador de PoToken se
   arranca al abrir la app con internet.
+- **Búfer amplio (v0.4.1):** se carga hasta 5 min por delante (mín. 1 min, hasta 80 MB);
+  empieza a sonar con 2 s y retoma con 4 s tras un corte.
 - **Progreso visible:** "Buscando la canción…" (con segundos si tarda) y luego "Cargando NN %",
   porcentaje real de lo que ExoPlayer necesita para empezar a sonar.
 - Sin sesión, sin internet o con el interruptor del cuidador apagado, la sección no aparece.
 - **Detección automática de internet** (`data/ConnectivityMonitor`, desde v0.3.1): usa la red
   con internet *verificado* por Android. Al perderse, "Para ti" se oculta al instante; la
-  canción en línea que suena termina lo que ya cargó y el reproductor sigue con las canciones
+  canción en línea que suena termina lo que ya cargó (con el búfer, casi siempre la canción entera) y el reproductor sigue con las canciones
   descargadas. Al volver el internet, "Para ti" reaparece y se actualiza.
 - El contenido depende de la cuenta conectada: conviene usar una cuenta cuyo historial sea
   apropiado para la niña.

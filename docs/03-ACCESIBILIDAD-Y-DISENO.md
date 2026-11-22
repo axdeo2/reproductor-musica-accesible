@@ -19,16 +19,18 @@ conservando la apariencia de YouTube que ella ya conoce (familiaridad = menos ap
 7. **Respuesta inmediata:** cada toque da **vibración corta + animación visible** para que sepa
    que la app la "escuchó".
 
-## 2. Colores (tema oscuro estilo YouTube)
+## 2. Colores (modo claro por defecto, modo oscuro opcional)
 
-| Token | Valor | Uso |
-|---|---|---|
-| `fondo` | `#0F0F0F` | Fondo general (igual al modo oscuro de YouTube) |
-| `superficie` | `#272727` | Tarjetas, fondo de botones secundarios |
-| `rojo` | `#FF0033` | Botón principal ▶/⏸, barra de progreso, ícono de la app |
-| `blanco` | `#FFFFFF` | Íconos y texto sobre fondo oscuro (contraste > 15:1) |
-| `gris` | `#AAAAAA` | Duración del video, información secundaria |
-| `foco` | `#FFD600` | Borde amarillo de 4 dp en la miniatura que está sonando / presionada |
+El cuidador puede activar el modo oscuro en su zona. El área del video siempre es negra.
+
+| Token | Claro (defecto) | Oscuro | Uso |
+|---|---|---|---|
+| `fondo` | `#FFFFFF` | `#0F0F0F` | Fondo general (igual que YouTube) |
+| `superficie` | `#F2F2F2` | `#272727` | Tarjetas, botones secundarios |
+| `texto` | `#0F0F0F` | `#FFFFFF` | Texto e íconos sobre el fondo |
+| `gris` | `#606060` | `#AAAAAA` | Duración, información secundaria |
+| `foco` | `#E69500` | `#FFD600` | Borde de 4 dp en la canción que suena |
+| `rojo` | `#FF0033` | `#FF0033` | Botón principal ▶/⏸, progreso, ícono de la app |
 
 - El **video que está sonando** se marca siempre con borde amarillo grueso + ícono de ecualizador
   animado, en Inicio y en "A continuación". Así sabe dónde está su canción.

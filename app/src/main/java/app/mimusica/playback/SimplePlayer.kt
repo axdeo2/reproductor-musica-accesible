@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
@@ -49,8 +50,24 @@ class SimplePlayer(
 ) {
     private val localSources = ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
 
+    /**
+     * Búfer amplio, como YouTube: mientras hay señal se guarda hasta 5 minutos por delante
+     * (casi toda la canción), así un corte o una baja de velocidad del internet no interrumpe
+     * la música. Empieza a sonar con 2 s cargados y, si llega a cortarse, retoma con 4 s.
+     */
+    private val loadControl = DefaultLoadControl.Builder()
+        .setBufferDurationsMs(
+            /* minBufferMs = */ MIN_BUFFER_MS,
+            /* maxBufferMs = */ MAX_BUFFER_MS,
+            /* bufferForPlaybackMs = */ START_BUFFER_MS.toInt(),
+            /* bufferForPlaybackAfterRebufferMs = */ REBUFFER_MS.toInt(),
+        )
+        .setTargetBufferBytes(TARGET_BUFFER_BYTES)
+        .setPrioritizeTimeOverSizeThresholds(true)
+        .build()
+
     /** Expuesto para conectar la superficie de video (PlayerView). */
-    val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    val player: ExoPlayer = ExoPlayer.Builder(context).setLoadControl(loadControl).build()
 
     private var queue: List<PlayableItem> = emptyList()
     private var index = 0
@@ -264,9 +281,14 @@ class SimplePlayer(
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
         const val RESOLVE_TIMEOUT_MS = 25_000L
-        /** Mínimo de ExoPlayer para empezar (DefaultLoadControl: 2,5 s) y tras una pausa (5 s). */
-        const val START_BUFFER_MS = 2_500L
-        const val REBUFFER_MS = 5_000L
+        /** Lo cargado necesario para empezar a sonar y para retomar tras un corte. */
+        const val START_BUFFER_MS = 2_000L
+        const val REBUFFER_MS = 4_000L
+        /** Se sigue cargando hasta tener 5 min por delante; nunca baja de 1 min si hay señal. */
+        const val MIN_BUFFER_MS = 60_000
+        const val MAX_BUFFER_MS = 300_000
+        /** Hasta 80 MB en memoria (alcanza para video 480p + audio de una canción). */
+        const val TARGET_BUFFER_BYTES = 80 * 1024 * 1024
         /** Los enlaces de YouTube duran horas; por seguridad se reutilizan solo 30 min. */
         const val PREFETCH_TTL_MS = 30L * 60_000L
     }

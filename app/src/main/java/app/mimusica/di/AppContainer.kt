@@ -28,7 +28,8 @@ class AppContainer(context: Context) {
 
     val localLibrary = LocalLibrary(File(appContext.filesDir, "descargas"))
     val childSettings = ChildSettings(appContext)
-    val connectivity = ConnectivityMonitor(appContext)
+    /** Perezoso: el proceso del PoToken también crea este contenedor y no lo necesita. */
+    val connectivity: ConnectivityMonitor by lazy { ConnectivityMonitor(appContext) }
 
     val online: OnlineSession by lazy { OnlineSession(AccountStore(appContext), AppTokenProvider(appContext)) }
     val downloads: DownloadQueue by lazy { DownloadQueue(online, localLibrary, appScope) }

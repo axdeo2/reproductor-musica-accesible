@@ -176,7 +176,7 @@ private fun LazyGridScope.section(
             modifier = Modifier.padding(top = 4.dp),
         ) {
             Icon(icon, null, tint = Colores.Rojo, modifier = Modifier.size(Dimens.IconoMinimo))
-            Text(label, color = Colores.Blanco, style = MaterialTheme.typography.titleLarge)
+            Text(label, color = Colores.Texto, style = MaterialTheme.typography.titleLarge)
         }
     }
     itemsIndexed(items, key = { _, it -> "$key-${it.id}" }) { index, item ->
@@ -330,7 +330,7 @@ private fun VideoCard(item: PlayableItem, isCurrent: Boolean, onClick: () -> Uni
         }
         Text(
             text = item.title,
-            color = Colores.Blanco,
+            color = Colores.Texto,
             style = MaterialTheme.typography.titleMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -411,13 +411,13 @@ private fun Controls(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.Separacion * 2, Alignment.CenterHorizontally),
     ) {
-        RoundButton(Icons.Filled.SkipPrevious, "Anterior", Colores.Superficie, Dimens.TocableMinimo, onPrevious)
+        RoundButton(Icons.Filled.SkipPrevious, "Anterior", Colores.Superficie, Dimens.TocableMinimo, onPrevious, tint = Colores.Texto)
         RoundButton(
             if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
             if (isPlaying) "Pausa" else "Reproducir",
             Colores.Rojo, Dimens.BotonPrincipal, onTogglePlay,
         )
-        RoundButton(Icons.Filled.SkipNext, "Siguiente", Colores.Superficie, Dimens.TocableMinimo, onNext)
+        RoundButton(Icons.Filled.SkipNext, "Siguiente", Colores.Superficie, Dimens.TocableMinimo, onNext, tint = Colores.Texto)
     }
 }
 
@@ -429,6 +429,7 @@ internal fun RoundButton(
     size: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    tint: Color = Colores.Blanco,
 ) {
     Box(
         modifier
@@ -439,7 +440,7 @@ internal fun RoundButton(
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = Colores.Blanco, modifier = Modifier.size(size * 0.55f))
+        Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.55f))
     }
 }
 
