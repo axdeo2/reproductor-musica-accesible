@@ -2,8 +2,11 @@
 
 ## 1. Principios
 
-1. **Sin red.** El `AndroidManifest.xml` **no declara `INTERNET`**. No hay anuncios, analítica ni
-   enlaces externos. La app no lanza `Intent`s hacia otras apps (ni compartir, ni navegador).
+1. **El modo niña no usa la red.** Solo la **zona de descargas** del cuidador (detrás del PIN)
+   se conecta a internet para iniciar sesión con Google, ver la biblioteca y descargar
+   (ver [05-ZONA-DESCARGAS.md](05-ZONA-DESCARGAS.md)). Las pantallas de la niña solo leen
+   archivos locales: no hay anuncios, analítica ni enlaces externos, y la app no lanza
+   `Intent`s hacia otras apps (ni compartir, ni navegador).
 2. **Nunca un callejón sin salida.** Cualquier error (video dañado, carpeta movida) se resuelve
    solo: se salta al siguiente video o se vuelve a Inicio. La niña nunca ve un diálogo de error.
 3. **Siempre suena algo.** Al terminar un video sigue el siguiente; al terminar la lista, vuelve
@@ -126,7 +129,7 @@ a pantalla completa; girar a vertical sale.
 | `WAKE_LOCK` | Mantener reproducción con pantalla apagada |
 | `POST_NOTIFICATIONS` (Android 13+) | Notificación obligatoria del servicio de medios |
 | `BIND_DEVICE_ADMIN` (en el receiver) | Modo kiosco |
-| ~~`INTERNET`~~ | **No se declara.** |
+| `INTERNET` | Solo lo usa el paquete `online/` (zona de descargas). Una prueba de CI impide que el código del modo niña lo importe. |
 | ~~`READ_EXTERNAL_STORAGE` / `READ_MEDIA_VIDEO`~~ | No hacen falta: el acceso es por SAF |
 
 ## 7. Pruebas

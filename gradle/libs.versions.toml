@@ -1,14 +1,20 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.0.21"
-coreKtx = "1.15.0"
-lifecycle = "2.8.7"
-activityCompose = "1.9.3"
-composeBom = "2024.12.01"
-media3 = "1.5.1"
-coil = "3.0.4"
-datastore = "1.1.1"
-documentfile = "1.0.1"
+agp = "9.5.2"
+# Misma versión de Kotlin que innertubex (un compilador solo lee metadatos hasta una versión adelante).
+kotlin = "2.4.21"
+coreKtx = "1.19.1"
+lifecycle = "2.11.1"
+activityCompose = "1.13.0"
+composeBom = "2026.11.01"
+media3 = "1.11.1"
+coil = "3.6.3"
+datastore = "1.3.0"
+documentfile = "1.1.0"
+webkit = "1.18.0"
+innertubex = "v0.13.0"
+ktor = "3.6.1"
+okhttp = "5.5.1"
+kotlinxSerialization = "1.13.0"
 junit = "4.13.2"
 
 [libraries]
@@ -30,9 +36,16 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+innertubex = { group = "com.github.MetrolistGroup.innertubex", name = "innertubex", version.ref = "innertubex" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

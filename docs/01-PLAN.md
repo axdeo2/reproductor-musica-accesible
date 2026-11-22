@@ -26,11 +26,13 @@ otra app**, usando los mismos gestos y la misma "forma" de pantalla que ya conoc
 - **Zona del cuidador** oculta (mantener presionado + PIN) con: carpeta, volumen máximo,
   orden (aleatorio / alfabético / más reproducidos), bloqueo kiosco, salir.
 - **Modo kiosco** (ver [04-BLOQUEO-KIOSCO.md](04-BLOQUEO-KIOSCO.md)).
-- Funciona **sin internet**: la app ni siquiera pide el permiso `INTERNET`.
+- El **modo niña funciona sin internet**: solo reproduce archivos guardados en el celular.
+- **Zona de descargas** (cuidador): iniciar sesión con Google, ver biblioteca y "me gusta" de
+  YouTube Music, descargar canciones/videos al celular (ver [05-ZONA-DESCARGAS.md](05-ZONA-DESCARGAS.md)).
 
 ### Fuera de alcance (por ahora)
-- Descargar videos desde la app (se copian a la carpeta desde la PC o con otra app).
-- Búsqueda por texto, comentarios, likes, suscripciones, cuentas.
+- Reproducir en línea (streaming) en el modo niña.
+- Búsqueda por texto, comentarios, likes o suscripciones **en el modo niña**.
 - Listas de reproducción múltiples (se puede evaluar en v2 con subcarpetas = "canales").
 
 ## 4. Fases
@@ -43,6 +45,7 @@ otra app**, usando los mismos gestos y la misma "forma" de pantalla que ya conoc
 | **3. Pantalla completa** | Rotación horizontal, modo inmersivo, controles que aparecen y se ocultan | Girar el celular entra a pantalla completa sin cortar el audio; volver a vertical regresa |
 | **4. Accesibilidad** | Botones grandes, anti-toques accidentales, volumen máximo, retroalimentación háptica | Prueba con la niña: usa la app 15 min sin pedir ayuda |
 | **5. Zona del cuidador** | Acceso oculto + PIN, ajustes, persistencia | El cuidador cambia carpeta y volumen; la niña no encuentra la zona por accidente |
+| **5b. Zona de descargas** | Login con Google, biblioteca, "me gusta", descargas a almacenamiento local | El cuidador descarga una lista de "me gusta" y aparece en el modo niña con el celular en modo avión |
 | **6. Bloqueo kiosco** | Fijación de pantalla → luego Lock Task con Device Owner + app como "Inicio" | Botones Inicio y Recientes no hacen nada; solo el cuidador puede salir |
 | **7. Pruebas con la usuaria** | Ajustes finos según observación (tamaños, colores, gestos que confunden) | Uso autónomo durante varios días seguidos |
 
@@ -56,6 +59,8 @@ otra app**, usando los mismos gestos y la misma "forma" de pantalla que ya conoc
 | Que ella cierre la app o se vaya a Inicio | Modo kiosco (fase 6) |
 | Configurar Device Owner exige quitar cuentas Google o restablecer el celular | Empezar con **fijación de pantalla** (cero código, cero riesgo); Device Owner solo si hace falta, con guía paso a paso |
 | Volumen muy alto | Límite de volumen configurable por el cuidador |
+| YouTube cambia su interfaz interna y las descargas dejan de funcionar | Depender de innertubex (mantenida por Metrolist) y actualizarla; lo ya descargado sigue funcionando sin conexión |
+| Riesgo para la cuenta de Google por usar un cliente no oficial | Aviso claro en la zona de descargas; recomendar no descargar en masa |
 
 ## 6. Decisiones abiertas (para validar con la familia)
 

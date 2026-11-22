@@ -16,6 +16,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // innertubex (conexión con YouTube Music, de Metrolist) y su dependencia quackjs
+        maven("https://jitpack.io") {
+            content {
+                includeGroup("com.github.MetrolistGroup.innertubex")
+                includeGroup("com.github.MetrolistGroup.quackjs")
+            }
+        }
     }
 }
 
