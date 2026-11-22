@@ -24,6 +24,7 @@ class LocalLibrary(val dir: File) {
 
     fun mediaFile(item: DownloadedItem) = File(dir, item.mediaFile)
     fun thumbnailFile(item: DownloadedItem) = item.thumbnailFile?.let { File(dir, it) }
+    fun videoFile(item: DownloadedItem) = item.videoFile?.let { File(dir, it) }?.takeIf { it.isFile }
     fun contains(videoId: String) = _items.value.any { it.videoId == videoId }
 
     suspend fun refresh() = withContext(Dispatchers.IO) {

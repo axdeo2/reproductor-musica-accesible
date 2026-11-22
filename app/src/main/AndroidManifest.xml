@@ -31,5 +31,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+          Generador de PoToken (necesario para descargar video). Corre en un proceso aparte
+          porque usa un WebView (~130 MB) y se cierra solo cuando no se usa. Solo lo usa la
+          zona de descargas.
+        -->
+        <service
+            android:name=".online.potoken.PoTokenService"
+            android:exported="false"
+            android:process=":potoken" />
     </application>
 </manifest>

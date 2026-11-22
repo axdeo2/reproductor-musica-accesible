@@ -1,9 +1,11 @@
 package app.mimusica.online
 
+import android.util.Log
 import app.mimusica.data.DownloadedItem
 import app.mimusica.data.LocalLibrary
 import com.metrolist.innertubex.extraction.AudioQuality
 import com.metrolist.innertubex.extraction.ContentHints
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -14,10 +16,11 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Descarga una canción a la carpeta local.
+ * Descarga una canción a la carpeta local: VIDEO (sin sonido) + AUDIO por separado, que el
+ * reproductor junta. Si el video no se puede obtener, guarda solo el audio.
  *
- * Versión 1: solo AUDIO + miniatura en alta resolución. Probado: el audio se obtiene sin
- * PoToken; el video de música popular devuelve 403 sin PoToken (ver docs/05-ZONA-DESCARGAS.md).
+ * El video de la música popular exige PoToken; lo genera `online/potoken` (BotGuard en un
+ * WebView). Ver docs/05-ZONA-DESCARGAS.md.
  */
 class StreamDownloader(
     private val session: OnlineSession,
@@ -25,26 +28,15 @@ class StreamDownloader(
 ) {
     suspend fun download(track: RemoteTrack, onProgress: (Float) -> Unit): DownloadedItem =
         withContext(Dispatchers.IO) {
-            val hints = ContentHints(wantVideo = false).withStreamCapabilities(
-                allowHls = false,   // queremos un archivo, no una lista HLS
-                allowSabr = false,  // SABR requiere un transporte especial
-                allowBoundedRange = true,
-            )
-            val stream = session.extractor.extract(track.videoId, hints, audioQuality = AudioQuality.HIGH)
-                ?: throw IOException("No se encontró un audio descargable")
-
-            val ext = if (stream.mimeType?.contains("webm") == true) "webm" else "m4a"
             val dir = library.dir.apply { mkdirs() }
-            val mediaName = "${track.videoId}.$ext"
-            val chunk = stream.rangeChunkSizeBytes.takeIf { it > 0 } ?: DEFAULT_CHUNK
-            fetchRanged(
-                url = stream.audioUrl,
-                headers = stream.headers,
-                knownLength = stream.contentLengthBytes,
-                chunk = chunk,
-                target = File(dir, mediaName),
-                onProgress = onProgress,
-            )
+            val saved = try {
+                downloadVideoAndAudio(track, dir, onProgress)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Video no disponible, se guarda solo audio (${e::class.simpleName})")
+                null
+            } ?: downloadAudioOnly(track, dir, onProgress)
 
             val thumbName = "${track.videoId}.jpg"
             val thumbUrl = track.thumbnailUrl ?: "https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg"
@@ -55,14 +47,76 @@ class StreamDownloader(
                 title = track.title,
                 artists = track.artists,
                 durationText = track.durationText,
-                mediaFile = mediaName,
+                mediaFile = saved.audioFile,
+                videoFile = saved.videoFile,
+                videoHeight = saved.videoHeight,
                 thumbnailFile = thumbName.takeIf { thumbOk },
-                mimeType = stream.mimeType,
+                mimeType = saved.audioMime,
                 addedAt = System.currentTimeMillis(),
             )
             library.save(item)
             item
         }
+
+    private data class Saved(
+        val audioFile: String,
+        val audioMime: String?,
+        val videoFile: String? = null,
+        val videoHeight: Int? = null,
+    )
+
+    /** Devuelve null si YouTube no entrega un video descargable para esta canción. */
+    private suspend fun downloadVideoAndAudio(track: RemoteTrack, dir: File, onProgress: (Float) -> Unit): Saved? {
+        val hints = ContentHints(wantVideo = true, maxVideoHeight = MAX_VIDEO_HEIGHT).withStreamCapabilities(
+            allowHls = false,
+            allowSabr = false,
+            allowBoundedRange = true,
+        )
+        val s = session.extractor.extract(track.videoId, hints, audioQuality = AudioQuality.HIGH) ?: return null
+        val videoUrl = s.videoUrl ?: return null
+        val chunk = s.rangeChunkSizeBytes.takeIf { it > 0 } ?: DEFAULT_CHUNK
+
+        val audioBytes = s.contentLengthBytes ?: 0L
+        val videoBytes = s.videoContentLengthBytes ?: 0L
+        val total = (audioBytes + videoBytes).toFloat().takeIf { it > 0f }
+        val videoShare = if (total != null) videoBytes / total else 0.8f
+
+        val videoName = "${track.videoId}.video.${extensionOf(s.videoMimeType, video = true)}"
+        val audioName = "${track.videoId}.${extensionOf(s.mimeType, video = false)}"
+        try {
+            fetchRanged(videoUrl, s.headers, s.videoContentLengthBytes, chunk, File(dir, videoName)) { p ->
+                onProgress(p * videoShare)
+            }
+            fetchRanged(s.audioUrl, s.headers, s.contentLengthBytes, chunk, File(dir, audioName)) { p ->
+                onProgress(videoShare + p * (1f - videoShare))
+            }
+        } catch (e: Exception) {
+            File(dir, videoName).delete()
+            File(dir, audioName).delete()
+            throw e
+        }
+        return Saved(audioName, s.mimeType, videoName, s.videoHeight)
+    }
+
+    private suspend fun downloadAudioOnly(track: RemoteTrack, dir: File, onProgress: (Float) -> Unit): Saved {
+        val hints = ContentHints(wantVideo = false).withStreamCapabilities(
+            allowHls = false,   // queremos un archivo, no una lista HLS
+            allowSabr = false,  // SABR requiere un transporte especial
+            allowBoundedRange = true,
+        )
+        val s = session.extractor.extract(track.videoId, hints, audioQuality = AudioQuality.HIGH)
+            ?: throw IOException("No se encontró un audio descargable")
+        val audioName = "${track.videoId}.${extensionOf(s.mimeType, video = false)}"
+        val chunk = s.rangeChunkSizeBytes.takeIf { it > 0 } ?: DEFAULT_CHUNK
+        fetchRanged(s.audioUrl, s.headers, s.contentLengthBytes, chunk, File(dir, audioName), onProgress)
+        return Saved(audioName, s.mimeType)
+    }
+
+    private fun extensionOf(mime: String?, video: Boolean): String = when {
+        mime?.contains("webm") == true -> "webm"
+        video -> "mp4"
+        else -> "m4a"
+    }
 
     /** Descarga por rangos (YouTube limita la velocidad de las descargas sin rango). */
     private suspend fun fetchRanged(
@@ -124,6 +178,10 @@ class StreamDownloader(
     }
 
     private companion object {
+        const val TAG = "StreamDownloader"
         const val DEFAULT_CHUNK = 1L shl 20 // 1 MiB
+
+        /** 480p: se ve bien en un celular y ocupa ~3-4 veces menos que 720p. */
+        const val MAX_VIDEO_HEIGHT = 480
     }
 }

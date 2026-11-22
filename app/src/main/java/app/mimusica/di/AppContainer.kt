@@ -5,6 +5,7 @@ import app.mimusica.data.LocalLibrary
 import app.mimusica.online.AccountStore
 import app.mimusica.online.DownloadQueue
 import app.mimusica.online.OnlineSession
+import app.mimusica.online.potoken.AppTokenProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,6 +22,6 @@ class AppContainer(context: Context) {
     /** Lo único que usa el modo niña. */
     val localLibrary = LocalLibrary(File(appContext.filesDir, "descargas"))
 
-    val online: OnlineSession by lazy { OnlineSession(AccountStore(appContext)) }
+    val online: OnlineSession by lazy { OnlineSession(AccountStore(appContext), AppTokenProvider(appContext)) }
     val downloads: DownloadQueue by lazy { DownloadQueue(online, localLibrary, appScope) }
 }

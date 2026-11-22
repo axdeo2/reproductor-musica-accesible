@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -51,6 +50,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import app.mimusica.R
 import app.mimusica.data.DownloadedItem
 import app.mimusica.ui.components.AppLogo
@@ -73,6 +76,9 @@ fun HomeScreen(
     thumbnailOf: (DownloadedItem) -> File?,
     currentId: String?,
     isPlaying: Boolean,
+    /** Reproductor para la superficie de video; el video se muestra solo si la canción lo tiene. */
+    player: Player,
+    hasVideo: (DownloadedItem) -> Boolean,
     onPlay: (index: Int) -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
@@ -89,6 +95,13 @@ fun HomeScreen(
             .safeDrawingPadding()
     ) {
         TopBar(onOpenCaregiver)
+
+        // Como YouTube: el video arriba y la lista para cambiar de canción debajo.
+        val current = items.firstOrNull { it.videoId == currentId }
+        if (current != null) {
+            NowPlaying(current, thumbnailOf(current), hasVideo(current), player)
+            Controls(isPlaying, onTogglePlay, onNext, onPrevious)
+        }
 
         Box(Modifier.weight(1f)) {
             if (items.isEmpty()) {
@@ -110,11 +123,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-
-        val current = items.firstOrNull { it.videoId == currentId }
-        if (current != null) {
-            MiniPlayer(current, thumbnailOf(current), isPlaying, onTogglePlay, onNext, onPrevious)
         }
     }
 }
@@ -231,9 +239,41 @@ private fun VideoCard(item: DownloadedItem, thumbnail: File?, isCurrent: Boolean
 }
 
 @Composable
-private fun MiniPlayer(
-    item: DownloadedItem,
-    thumbnail: File?,
+private fun NowPlaying(item: DownloadedItem, thumbnail: File?, hasVideo: Boolean, player: Player) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .background(Color.Black),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (hasVideo) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        useController = false // controles propios, grandes
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        setShutterBackgroundColor(android.graphics.Color.BLACK)
+                    }
+                },
+                update = { it.player = player },
+                onRelease = { it.player = null },
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            // Solo audio: la miniatura grande ocupa el lugar del video.
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = item.title,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Controls(
     isPlaying: Boolean,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
@@ -242,28 +282,18 @@ private fun MiniPlayer(
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Colores.Superficie)
-            .padding(horizontal = Dimens.Separacion, vertical = 8.dp),
+            .background(Colores.Fondo)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.Separacion),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.Separacion * 2, Alignment.CenterHorizontally),
     ) {
-        AsyncImage(
-            model = thumbnail,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .width(112.dp)
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp)),
-        )
-        Spacer(Modifier.weight(1f))
-        RoundButton(Icons.Filled.SkipPrevious, "Anterior", Colores.Fondo, Dimens.TocableMinimo, onPrevious)
+        RoundButton(Icons.Filled.SkipPrevious, "Anterior", Colores.Superficie, Dimens.TocableMinimo, onPrevious)
         RoundButton(
             if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
             if (isPlaying) "Pausa" else "Reproducir",
             Colores.Rojo, Dimens.BotonPrincipal, onTogglePlay,
         )
-        RoundButton(Icons.Filled.SkipNext, "Siguiente", Colores.Fondo, Dimens.TocableMinimo, onNext)
+        RoundButton(Icons.Filled.SkipNext, "Siguiente", Colores.Superficie, Dimens.TocableMinimo, onNext)
     }
 }
 

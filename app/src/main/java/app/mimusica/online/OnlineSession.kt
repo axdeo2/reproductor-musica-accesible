@@ -5,6 +5,7 @@ import com.metrolist.innertubex.cipher.PlayerConfigRepository
 import com.metrolist.innertubex.cipher.RemotePlayerConfigStore
 import com.metrolist.innertubex.cipher.YouTubeCipherService
 import com.metrolist.innertubex.extraction.InnerTubeExtractor
+import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.extraction.YtConfigParserImpl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -19,7 +20,10 @@ import java.util.concurrent.TimeUnit
  * Todo lo que usa internet vive aquí y SOLO se crea al entrar a la zona de descargas.
  * Conexión con YouTube Music mediante innertubex (GPL-3.0, de Metrolist).
  */
-class OnlineSession(private val accounts: AccountStore) {
+class OnlineSession(
+    private val accounts: AccountStore,
+    tokenProvider: TokenProvider? = null,
+) {
     val okHttp: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -44,6 +48,9 @@ class OnlineSession(private val accounts: AccountStore) {
         configParser = YtConfigParserImpl(http, innerTube, configStore, cipherService = cipher),
         cipherService = cipher,
         innerTube = innerTube,
+        // Genera PoToken con BotGuard en un WebView (ver online/potoken); sin él, YouTube
+        // bloquea el video de la música popular.
+        tokenProvider = tokenProvider,
     )
 
     val library = YtMusicLibrary(innerTube)

@@ -38,7 +38,9 @@ Permite al cuidador **iniciar sesión con su cuenta de Google**, ver sus **"me g
 | `online/AccountStore.kt` | Guarda cookie, `visitorData`, `dataSyncId` y `authUser` en DataStore privado de la app. |
 | `ui/caregiver/LoginWebView.kt` | Página oficial de inicio de sesión de Google en un WebView. Al llegar a `music.youtube.com` con sesión, lee la cookie y `yt.config_` (mismo método que Metrolist). La app nunca ve la contraseña. La navegación se limita a dominios de Google/YouTube. |
 | `online/YtMusicLibrary.kt` | `browse` con el cliente `WEB_REMIX`: "me gusta" (`VLLM`), listas de la biblioteca (`FEmusic_liked_playlists`), canciones de una lista (`VL…`), con paginación. Recorre el JSON buscando los *renderers* conocidos. |
-| `online/StreamDownloader.kt` | Obtiene la URL del audio con `InnerTubeExtractor` (sin HLS ni SABR) y la descarga **por rangos** a `<videoId>.m4a/.webm`, más la miniatura y el `.json`. |
+| `online/StreamDownloader.kt` | Pide video (máx. 480p) + audio a `InnerTubeExtractor` (sin HLS ni SABR) y los descarga **por rangos** a `<videoId>.video.webm/mp4` y `<videoId>.webm/m4a`, más la miniatura y el `.json`. Si el video no está disponible, guarda solo el audio. |
+| `online/potoken/` | Generador de **PoToken** adaptado de Metrolist: `AppTokenProvider` (caché y reintentos), `RemotePoTokenMinter` + `PoTokenService` (proceso aparte `:potoken`, se cierra solo) y `BotGuardPoTokenMinter` (ejecuta el desafío BotGuard de YouTube en un WebView con `assets/po_token.html`). |
+| `playback/SimplePlayer.kt` | Reproduce archivos locales; si hay video, lo junta con el audio (`MergingMediaSource`). Inicio muestra el video arriba y la lista debajo. |
 | `online/DownloadQueue.kt` | Cola: una descarga a la vez, pausa de 1,5 s entre canciones, estado por canción (en cola / descargando % / lista / error). |
 | `data/LocalLibrary.kt` | Lee y borra lo guardado. Es lo único que ve el modo niña. |
 
@@ -58,18 +60,18 @@ Permite al cuidador **iniciar sesión con su cuenta de Google**, ver sus **"me g
 | Video musical popular, **audio + video 720p** | ❌ URLs con **HTTP 403** (exigen *PoToken*) |
 | Video musical popular, **solo audio** | ✅ cliente `VISIONOS`, opus/webm descargable |
 
-Por eso la **versión 1 descarga solo audio** + miniatura en alta resolución (544×544). En el
-modo niña se ve la miniatura grande mientras suena la música.
+Por eso la descarga de video usa un **generador de PoToken** (sección 2, `online/potoken/`),
+igual que Metrolist. Funciona solo en Android (necesita WebView), así que **aún no está
+probado en un celular**. Si el PoToken falla, la canción se guarda solo con audio y en el modo
+niña se ve la miniatura grande.
+
+Tamaño aproximado por canción de 4 minutos: audio ~4 MB; video 480p ~15–25 MB.
 
 ## 5. Pendiente / siguientes pasos
 
-1. **Video descargado (PoToken).** Portar de Metrolist el generador de PoToken
-   (`AndroidTokenProvider`, `PoTokenService`, `BotGuardPoTokenMinter`, `RemotePoTokenMinter`;
-   ~1.000 líneas, usa un WebView en un proceso aparte) e inyectarlo como `tokenProvider` en
-   `InnerTubeExtractor`. Luego descargar video + audio por separado y reproducirlos juntos con
-   `MergingMediaSource`. Solo se puede probar en un celular real.
+1. **Probar en un celular**: inicio de sesión real, "me gusta", listas, descarga con video
+   (PoToken) y que la APK release funcione igual que la debug.
 2. **Descargas en segundo plano** con WorkManager / servicio en primer plano (hoy la cola corre
    mientras la app está abierta, que es lo normal en modo kiosco).
 3. **PIN** para entrar a la zona (fase 5).
-4. Probar en el celular: inicio de sesión real, "me gusta", listas y que R8 no rompa nada en
-   la APK release.
+4. Opción del cuidador para elegir calidad (solo audio / 360p / 480p / 720p) según el espacio.

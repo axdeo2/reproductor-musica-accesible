@@ -12,8 +12,11 @@ data class DownloadedItem(
     val title: String,
     val artists: String,
     val durationText: String? = null,
-    /** Nombre del archivo multimedia dentro de la carpeta de descargas. */
+    /** Archivo de AUDIO dentro de la carpeta de descargas. */
     val mediaFile: String,
+    /** Archivo de VIDEO (sin sonido) si se descargó; se reproduce junto con [mediaFile]. */
+    val videoFile: String? = null,
+    val videoHeight: Int? = null,
     /** Nombre del archivo de miniatura (jpg) dentro de la carpeta de descargas. */
     val thumbnailFile: String? = null,
     val mimeType: String? = null,
