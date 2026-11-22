@@ -78,6 +78,12 @@ Tamaño aproximado por canción de 4 minutos: audio ~4 MB; video 480p ~15–25 M
 - `playback/SimplePlayer` lleva su propia cola: si una canción falla (sin internet) salta a la
   siguiente y se detiene si todas fallan.
 - Si una recomendación ya está guardada, se reproduce desde el celular.
+- **Velocidad (v0.4.0):** el intento de video tiene un límite de 8 s (si el PoToken tarda, suena
+  el audio con la miniatura); la canción completa tiene 25 s antes de saltar a la siguiente; los
+  enlaces de la siguiente canción se piden mientras suena la actual; el generador de PoToken se
+  arranca al abrir la app con internet.
+- **Progreso visible:** "Buscando la canción…" (con segundos si tarda) y luego "Cargando NN %",
+  porcentaje real de lo que ExoPlayer necesita para empezar a sonar.
 - Sin sesión, sin internet o con el interruptor del cuidador apagado, la sección no aparece.
 - **Detección automática de internet** (`data/ConnectivityMonitor`, desde v0.3.1): usa la red
   con internet *verificado* por Android. Al perderse, "Para ti" se oculta al instante; la

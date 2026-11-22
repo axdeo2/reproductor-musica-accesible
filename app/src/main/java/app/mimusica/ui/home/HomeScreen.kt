@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.MusicNote
@@ -69,6 +70,9 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.mimusica.R
 import app.mimusica.data.PlayableItem
+import app.mimusica.playback.LoadState
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableIntStateOf
 import app.mimusica.ui.components.AppLogo
 import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
@@ -92,7 +96,7 @@ fun HomeScreen(
     /** Canción que suena (puede ser de "Para ti" aunque la sección esté oculta sin internet). */
     current: PlayableItem?,
     isPlaying: Boolean,
-    isLoading: Boolean,
+    loadState: LoadState,
     hasVideo: Boolean,
     /** Reproductor para la superficie de video. */
     player: Player,
@@ -102,7 +106,25 @@ fun HomeScreen(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onOpenCaregiver: () -> Unit,
+    /** Pantalla completa (horizontal). */
+    fullscreen: Boolean,
+    onFullscreenChange: (Boolean) -> Unit,
 ) {
+    if (fullscreen && current != null) {
+        FullscreenPlayer(
+            item = current,
+            hasVideo = hasVideo,
+            loadState = loadState,
+            isPlaying = isPlaying,
+            player = player,
+            onTogglePlay = onTogglePlay,
+            onNext = onNext,
+            onPrevious = onPrevious,
+            onExit = { onFullscreenChange(false) },
+        )
+        return
+    }
+
     // En Inicio, Atrás no hace nada: así nunca sale de la app con ese botón.
     BackHandler(enabled = true) { }
 
@@ -116,7 +138,7 @@ fun HomeScreen(
 
         val currentId = current?.id
         if (current != null) {
-            NowPlaying(current, hasVideo, isLoading, player)
+            NowPlaying(current, hasVideo, loadState, player, onFullscreen = { onFullscreenChange(true) })
             Controls(isPlaying, onTogglePlay, onNext, onPrevious)
         }
 
@@ -318,8 +340,13 @@ private fun VideoCard(item: PlayableItem, isCurrent: Boolean, onClick: () -> Uni
 }
 
 @Composable
-private fun NowPlaying(item: PlayableItem, hasVideo: Boolean, isLoading: Boolean, player: Player) {
-    val thumbnail = item.thumbnail
+private fun NowPlaying(
+    item: PlayableItem,
+    hasVideo: Boolean,
+    loadState: LoadState,
+    player: Player,
+    onFullscreen: () -> Unit,
+) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -327,31 +354,45 @@ private fun NowPlaying(item: PlayableItem, hasVideo: Boolean, isLoading: Boolean
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (hasVideo) {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false // controles propios, grandes
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        setShutterBackgroundColor(android.graphics.Color.BLACK)
-                    }
-                },
-                update = { it.player = player },
-                onRelease = { it.player = null },
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            // Solo audio: la miniatura grande ocupa el lugar del video.
-            AsyncImage(
-                model = thumbnail,
-                contentDescription = item.title,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        if (isLoading) {
-            CircularProgressIndicator(color = Colores.Rojo, strokeWidth = 6.dp, modifier = Modifier.size(64.dp))
-        }
+        PlayerSurface(item, hasVideo, player, Modifier.fillMaxSize())
+        LoadingOverlay(loadState)
+        // Botón de pantalla completa abajo a la derecha, como en YouTube.
+        RoundButton(
+            icon = Icons.Filled.Fullscreen,
+            description = "Pantalla completa",
+            background = Color.Black.copy(alpha = 0.55f),
+            size = Dimens.TocableMinimo,
+            onClick = onFullscreen,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(8.dp),
+        )
+    }
+}
+
+/** Video (si la canción lo tiene) o la miniatura grande (solo audio). */
+@Composable
+internal fun PlayerSurface(item: PlayableItem, hasVideo: Boolean, player: Player, modifier: Modifier) {
+    if (hasVideo) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false // controles propios, grandes
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                }
+            },
+            update = { it.player = player },
+            onRelease = { it.player = null },
+            modifier = modifier,
+        )
+    } else {
+        AsyncImage(
+            model = item.thumbnail,
+            contentDescription = item.title,
+            contentScale = ContentScale.Fit,
+            modifier = modifier,
+        )
     }
 }
 
@@ -381,15 +422,16 @@ private fun Controls(
 }
 
 @Composable
-private fun RoundButton(
+internal fun RoundButton(
     icon: ImageVector,
     description: String,
     background: Color,
     size: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        Modifier
+        modifier
             .size(size)
             .clip(CircleShape)
             .background(background)
@@ -398,5 +440,62 @@ private fun RoundButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, null, tint = Colores.Blanco, modifier = Modifier.size(size * 0.55f))
+    }
+}
+
+/**
+ * Progreso de carga sobre el área del video:
+ *  - "Buscando la canción…" (pidiendo los enlaces a YouTube): anillo girando + segundos.
+ *  - "Cargando NN %" (porcentaje real de lo necesario para empezar a sonar).
+ */
+@Composable
+internal fun LoadingOverlay(state: LoadState) {
+    if (state !is LoadState.Searching && state !is LoadState.Buffering) return
+    var seconds by remember(state is LoadState.Searching) { mutableIntStateOf(0) }
+    if (state is LoadState.Searching) {
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(1_000)
+                seconds++
+            }
+        }
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(96.dp)) {
+                when (state) {
+                    is LoadState.Buffering -> {
+                        CircularProgressIndicator(
+                            progress = { state.percent / 100f },
+                            color = Colores.Rojo,
+                            trackColor = Colores.Superficie,
+                            strokeWidth = 8.dp,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Text("${state.percent}%", color = Colores.Blanco, style = MaterialTheme.typography.titleLarge)
+                    }
+                    else -> CircularProgressIndicator(
+                        color = Colores.Rojo,
+                        trackColor = Colores.Superficie,
+                        strokeWidth = 8.dp,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = when (state) {
+                    is LoadState.Buffering -> "Cargando la canción"
+                    else -> if (seconds >= 6) "Buscando la canción… ($seconds s)" else "Buscando la canción…"
+                },
+                color = Colores.Blanco,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }

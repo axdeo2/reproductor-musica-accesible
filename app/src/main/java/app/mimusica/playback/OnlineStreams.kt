@@ -16,4 +16,7 @@ class ResolvedStream(
 interface OnlineStreams {
     /** null si no hay internet o YouTube no entrega la canción. */
     suspend fun resolve(videoId: String): ResolvedStream?
+
+    /** Prepara por adelantado lo que haga falta (p. ej. el generador de PoToken). */
+    suspend fun prewarm() {}
 }

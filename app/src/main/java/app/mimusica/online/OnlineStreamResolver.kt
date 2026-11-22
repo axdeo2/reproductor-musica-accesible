@@ -8,20 +8,28 @@ import com.metrolist.innertubex.extraction.ContentHints
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Obtiene los enlaces para reproducir en línea una recomendación de "Para ti".
  *
  * Se piden clientes que entreguen archivos directos sin rangos acotados obligatorios
  * (`allowBoundedRange = false`), para que ExoPlayer los reproduzca tal cual.
- * Primero video + audio (con PoToken); si no se puede, solo audio.
+ * Primero video + audio (con PoToken), con un límite de [VIDEO_TIMEOUT_MS]: si el video tarda
+ * más (algunas canciones hacen esperar mucho al PoToken), se reproduce solo el audio para
+ * que la música empiece rápido.
  */
 class OnlineStreamResolver(private val session: OnlineSession) : OnlineStreams {
 
     override suspend fun resolve(videoId: String): ResolvedStream? = withContext(Dispatchers.IO) {
         session.ensureRestored()
-        tryExtract(videoId, wantVideo = true)?.takeIf { it.videoUrl != null }
+        withTimeoutOrNull(VIDEO_TIMEOUT_MS) { tryExtract(videoId, wantVideo = true) }
+            ?.takeIf { it.videoUrl != null }
             ?: tryExtract(videoId, wantVideo = false)
+    }
+
+    override suspend fun prewarm() {
+        if (session.ensureRestored() != null) session.prewarmTokens()
     }
 
     private suspend fun tryExtract(videoId: String, wantVideo: Boolean): ResolvedStream? = try {
@@ -40,5 +48,6 @@ class OnlineStreamResolver(private val session: OnlineSession) : OnlineStreams {
     private companion object {
         const val TAG = "OnlineStreamResolver"
         const val MAX_VIDEO_HEIGHT = 480
+        const val VIDEO_TIMEOUT_MS = 8_000L
     }
 }

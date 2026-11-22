@@ -1,5 +1,6 @@
 package app.mimusica.online
 
+import app.mimusica.online.potoken.AppTokenProvider
 import com.metrolist.innertubex.InnerTube
 import com.metrolist.innertubex.cipher.PlayerConfigRepository
 import com.metrolist.innertubex.cipher.RemotePlayerConfigStore
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit
  */
 class OnlineSession(
     private val accounts: AccountStore,
-    tokenProvider: TokenProvider? = null,
+    private val tokenProvider: TokenProvider? = null,
 ) {
     val okHttp: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -75,6 +76,13 @@ class OnlineSession(
     suspend fun ensureRestored(): AccountSession? {
         if (restored) return current
         return restore()
+    }
+
+    /** Arranca el proceso del generador de PoToken para que la primera canción no espere. */
+    suspend fun prewarmTokens() {
+        runCatching {
+            (tokenProvider as? AppTokenProvider)?.prewarm() ?: tokenProvider?.prewarm(current?.cookie)
+        }
     }
 
     suspend fun signIn(session: AccountSession) {

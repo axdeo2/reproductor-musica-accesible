@@ -1,6 +1,16 @@
 # Reproductor de Música Accesible
 
-Aplicación Android (APK) que reproduce **videos musicales ya descargados en el celular**, con una
+<p align="center">
+  <a href="https://github.com/axdeo2/reproductor-musica-accesible/releases/latest/download/musica.apk">
+    <img alt="Descargar APK" src="https://img.shields.io/badge/Descargar-APK-FF0033?style=for-the-badge&logo=android&logoColor=white" height="56">
+  </a>
+  <br>
+  <a href="https://github.com/axdeo2/reproductor-musica-accesible/releases/latest">
+    <img alt="Última versión" src="https://img.shields.io/github/v/release/axdeo2/reproductor-musica-accesible?label=versi%C3%B3n&style=flat-square&color=272727">
+  </a>
+</p>
+
+Aplicación Android (APK) que reproduce **videos musicales de YouTube, descargados o en línea**, con una
 interfaz que imita la experiencia de YouTube en el móvil, pensada para una niña con discapacidad
 que ya sabe usar YouTube pero se pierde cuando un anuncio la saca de la aplicación.
 
@@ -45,7 +55,7 @@ de sesión) · Lock Task Mode (kiosco).
 
 ## Descargar
 
-**[⬇ Descargar la última versión (musica.apk)](https://github.com/axdeo2/reproductor-musica-accesible/releases/latest/download/musica.apk)**
+<a href="https://github.com/axdeo2/reproductor-musica-accesible/releases/latest/download/musica.apk"><img alt="Descargar APK" src="https://img.shields.io/badge/Descargar-APK-FF0033?style=for-the-badge&logo=android&logoColor=white" height="48"></a>
 
 Abrir el archivo en el celular y permitir "instalar apps desconocidas". Todas las versiones
 están en [Releases](https://github.com/axdeo2/reproductor-musica-accesible/releases).

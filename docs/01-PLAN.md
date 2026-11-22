@@ -42,7 +42,7 @@ otra app**, usando los mismos gestos y la misma "forma" de pantalla que ya conoc
 | **0. Base** | Proyecto Android (Gradle, Compose, Media3), CI en GitHub Actions que genera la APK debug | `./gradlew assembleDebug` pasa en CI y la APK queda como artefacto descargable |
 | **1. Biblioteca** | Elegir carpeta (SAF), escanear videos, generar miniaturas, pantalla Inicio | Se ven las miniaturas de la carpeta real del celular en < 2 s después del primer escaneo |
 | **2. Reproductor** | Pantalla Ver video vertical + lista "A continuación", reproducción automática, repetir | Tocar una miniatura reproduce; al terminar sigue el siguiente; tocar otro de la lista cambia |
-| **3. Pantalla completa** | Rotación horizontal, modo inmersivo, controles que aparecen y se ocultan | Girar el celular entra a pantalla completa sin cortar el audio; volver a vertical regresa |
+| **3. Pantalla completa** ✅ v0.4.0 | Rotación horizontal, modo inmersivo, controles que aparecen y se ocultan | Girar el celular entra a pantalla completa sin cortar el audio; volver a vertical regresa |
 | **4. Accesibilidad** | Botones grandes, anti-toques accidentales, volumen máximo, retroalimentación háptica | Prueba con la niña: usa la app 15 min sin pedir ayuda |
 | **5. Zona del cuidador** | Acceso oculto + PIN, ajustes, persistencia | El cuidador cambia carpeta y volumen; la niña no encuentra la zona por accidente |
 | **5b. Zona de descargas** | Login con Google, biblioteca, "me gusta", descargas a almacenamiento local | El cuidador descarga una lista de "me gusta" y aparece en el modo niña con el celular en modo avión |

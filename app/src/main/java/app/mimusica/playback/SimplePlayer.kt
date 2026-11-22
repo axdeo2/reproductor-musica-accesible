@@ -20,7 +20,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Reproductor del modo niña con cola propia.
@@ -60,9 +63,14 @@ class SimplePlayer(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    /** true mientras se obtiene el enlace de una canción en línea o se carga el archivo. */
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    /** Etapa de carga de la canción actual (para mostrar el progreso en pantalla). */
+    private val _loadState = MutableStateFlow<LoadState>(LoadState.Idle)
+    val loadState: StateFlow<LoadState> = _loadState.asStateFlow()
+
+    /** Enlaces ya obtenidos por adelantado (la siguiente canción), con hora de obtención. */
+    private val prefetched = mutableMapOf<String, Pair<ResolvedStream, Long>>()
+    private var prefetchJob: Job? = null
+    private var bufferWatchJob: Job? = null
 
     /** Si la canción actual tiene imagen de video (si no, se muestra la miniatura). */
     private val _hasVideo = MutableStateFlow(false)
@@ -77,10 +85,12 @@ class SimplePlayer(
             override fun onPlaybackStateChanged(state: Int) {
                 when (state) {
                     Player.STATE_READY -> {
-                        _isLoading.value = false
+                        stopBufferWatch()
+                        _loadState.value = LoadState.Ready
                         consecutiveFailures = 0
+                        prefetchNext()
                     }
-                    Player.STATE_BUFFERING -> _isLoading.value = true
+                    Player.STATE_BUFFERING -> startBufferWatch()
                     Player.STATE_ENDED -> next()
                     else -> Unit
                 }
@@ -131,6 +141,8 @@ class SimplePlayer(
 
     fun release() {
         loadJob?.cancel()
+        prefetchJob?.cancel()
+        stopBufferWatch()
         player.release()
     }
 
@@ -139,10 +151,13 @@ class SimplePlayer(
         val item = queue.getOrNull(index) ?: return
         _currentId.value = item.id
         _hasVideo.value = item.videoFile != null
-        _isLoading.value = true
+        _loadState.value = if (item.isOnline) LoadState.Searching else LoadState.Buffering(0)
+        stopBufferWatch()
         player.stop()
         loadJob = scope.launch {
-            val source = if (item.isOnline) onlineSource(item) else localSource(item)
+            // Si una canción en línea no se consigue en 25 s, se pasa a la siguiente.
+            val source = if (item.isOnline) withTimeoutOrNull(RESOLVE_TIMEOUT_MS) { onlineSource(item) }
+            else localSource(item)
             if (source == null) {
                 skipAfterFailure()
                 return@launch
@@ -166,7 +181,8 @@ class SimplePlayer(
         if (consecutiveFailures >= queue.size) {
             // Todo falló (p. ej. solo hay recomendaciones y no hay internet): detenerse.
             player.stop()
-            _isLoading.value = false
+            stopBufferWatch()
+            _loadState.value = LoadState.Idle
             consecutiveFailures = 0
             return
         }
@@ -181,7 +197,8 @@ class SimplePlayer(
     }
 
     private suspend fun onlineSource(item: PlayableItem): MediaSource? {
-        val stream = online?.resolve(item.id) ?: return null
+        val stream = takePrefetched(item.id) ?: online?.resolve(item.id) ?: return null
+        _loadState.value = LoadState.Buffering(0)
         val headers = stream.headers.filterKeys { !it.equals("User-Agent", ignoreCase = true) }
         val http = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(false)
@@ -194,6 +211,50 @@ class SimplePlayer(
         return MergingMediaSource(sources.createMediaSource(mediaItem(item, Uri.parse(videoUrl))), audio)
     }
 
+    /**
+     * Porcentaje REAL de lo que falta cargar para empezar a sonar: lo almacenado por delante de
+     * la posición actual respecto del mínimo que ExoPlayer necesita para arrancar.
+     */
+    private fun startBufferWatch() {
+        if (bufferWatchJob?.isActive == true) return
+        bufferWatchJob = scope.launch {
+            while (isActive) {
+                val ahead = (player.bufferedPosition - player.currentPosition).coerceAtLeast(0)
+                val needed = if (player.currentPosition == 0L) START_BUFFER_MS else REBUFFER_MS
+                val percent = (ahead * 100 / needed).toInt().coerceIn(0, 99)
+                if (_loadState.value !is LoadState.Searching) _loadState.value = LoadState.Buffering(percent)
+                delay(250)
+            }
+        }
+    }
+
+    private fun stopBufferWatch() {
+        bufferWatchJob?.cancel()
+        bufferWatchJob = null
+    }
+
+    /** Mientras suena una canción, se piden por adelantado los enlaces de la siguiente en línea. */
+    private fun prefetchNext() {
+        val streams = online ?: return
+        if (queue.size < 2 || !hasInternet()) return
+        val next = queue[(index + 1) % queue.size]
+        if (!next.isOnline || takePrefetchedPeek(next.id)) return
+        prefetchJob?.cancel()
+        prefetchJob = scope.launch {
+            val resolved = withTimeoutOrNull(RESOLVE_TIMEOUT_MS) { streams.resolve(next.id) } ?: return@launch
+            prefetched.entries.removeAll { System.currentTimeMillis() - it.value.second > PREFETCH_TTL_MS }
+            prefetched[next.id] = resolved to System.currentTimeMillis()
+        }
+    }
+
+    private fun takePrefetchedPeek(id: String): Boolean =
+        prefetched[id]?.let { System.currentTimeMillis() - it.second < PREFETCH_TTL_MS } == true
+
+    private fun takePrefetched(id: String): ResolvedStream? {
+        val entry = prefetched.remove(id) ?: return null
+        return entry.first.takeIf { System.currentTimeMillis() - entry.second < PREFETCH_TTL_MS }
+    }
+
     private fun mediaItem(item: PlayableItem, uri: Uri) = MediaItem.Builder()
         .setMediaId(item.id)
         .setUri(uri)
@@ -202,5 +263,21 @@ class SimplePlayer(
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+        const val RESOLVE_TIMEOUT_MS = 25_000L
+        /** Mínimo de ExoPlayer para empezar (DefaultLoadControl: 2,5 s) y tras una pausa (5 s). */
+        const val START_BUFFER_MS = 2_500L
+        const val REBUFFER_MS = 5_000L
+        /** Los enlaces de YouTube duran horas; por seguridad se reutilizan solo 30 min. */
+        const val PREFETCH_TTL_MS = 30L * 60_000L
     }
+}
+
+/** Etapas de carga que se muestran en pantalla. */
+sealed interface LoadState {
+    data object Idle : LoadState
+    /** Pidiendo a YouTube los enlaces de una canción en línea. */
+    data object Searching : LoadState
+    /** Cargando lo necesario para empezar a sonar, en porcentaje real (0-99). */
+    data class Buffering(val percent: Int) : LoadState
+    data object Ready : LoadState
 }
