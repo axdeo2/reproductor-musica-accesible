@@ -34,6 +34,7 @@ Además, la app se puede **bloquear** para que ella no salga por accidente.
 | [docs/03-ACCESIBILIDAD-Y-DISENO.md](docs/03-ACCESIBILIDAD-Y-DISENO.md) | Reglas de diseño centradas en la usuaria |
 | [docs/04-BLOQUEO-KIOSCO.md](docs/04-BLOQUEO-KIOSCO.md) | Evaluación de cómo impedir que salga de la app |
 | [docs/05-ZONA-DESCARGAS.md](docs/05-ZONA-DESCARGAS.md) | Inicio de sesión con Google, biblioteca, "me gusta" y descargas (solo cuidador) |
+| [docs/06-RELEASES.md](docs/06-RELEASES.md) | Firma de la APK y cómo publicar versiones |
 
 ## Stack (resumen)
 
@@ -41,11 +42,18 @@ Kotlin · Jetpack Compose · Media3 (ExoPlayer) · Coil (miniaturas de video) ·
 Storage Access Framework · innertubex (YouTube Music, solo zona de descargas) · WebView (inicio
 de sesión) · Lock Task Mode (kiosco).
 
+## Descargar
+
+**[⬇ Descargar la última versión (musica.apk)](https://github.com/axdeo2/reproductor-musica-accesible/releases/latest/download/musica.apk)**
+
+Abrir el archivo en el celular y permitir "instalar apps desconocidas". Todas las versiones
+están en [Releases](https://github.com/axdeo2/reproductor-musica-accesible/releases).
+Cómo se publican: [docs/06-RELEASES.md](docs/06-RELEASES.md).
+
 ## Compilar e instalar
 
-**Sin compilar:** cada push a `main` genera las APK en GitHub Actions
-(pestaña *Actions* → último run → artefacto `musica-apk-…`). Descomprimir e instalar
-`app-release.apk` en el celular (permitir "instalar apps desconocidas").
+**Versiones de prueba:** cada push a `main` también genera las APK en GitHub Actions
+(pestaña *Actions* → último run → artefacto `musica-apk-…`, requiere cuenta de GitHub).
 
 **Localmente** (JDK 17 + Android SDK 35):
 
@@ -54,8 +62,8 @@ de sesión) · Lock Task Mode (kiosco).
 adb install app/build/outputs/apk/release/app-release.apk
 ```
 
-> La APK release todavía se firma con la clave *debug* para que se pueda instalar sin más pasos.
-> Antes de distribuirla ampliamente hay que crear una firma propia.
+> Sin la clave de firma del proyecto, la APK release se firma con la clave *debug*
+> (ver [docs/06-RELEASES.md](docs/06-RELEASES.md)).
 
 ## Proyecto open-source
 

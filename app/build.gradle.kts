@@ -1,3 +1,37 @@
+import java.util.Properties
+
+/**
+ * Firma de la APK release. Se busca, en orden:
+ *  1. Variables de entorno (GitHub Actions, a partir de los secretos RELEASE_*).
+ *  2. Un archivo de propiedades local fuera del repositorio, indicado por la variable
+ *     MUSICA_KEYSTORE_PROPERTIES o en ~/.android-keys/musica-keystore.properties.
+ * Si no hay ninguna, la release se firma con la clave debug (forks, pull requests).
+ */
+data class ReleaseKey(val file: File, val storePassword: String, val alias: String, val keyPassword: String)
+
+fun findReleaseKey(): ReleaseKey? {
+    System.getenv("RELEASE_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let { path ->
+        return ReleaseKey(
+            file(path),
+            System.getenv("RELEASE_KEYSTORE_PASSWORD").orEmpty(),
+            System.getenv("RELEASE_KEY_ALIAS").orEmpty(),
+            System.getenv("RELEASE_KEY_PASSWORD").orEmpty(),
+        )
+    }
+    val propsFile = System.getenv("MUSICA_KEYSTORE_PROPERTIES")?.let(::File)
+        ?: File(System.getProperty("user.home"), ".android-keys/musica-keystore.properties")
+    if (!propsFile.isFile) return null
+    val p = Properties().apply { propsFile.inputStream().use(::load) }
+    return ReleaseKey(
+        File(p.getProperty("storeFile")),
+        p.getProperty("storePassword"),
+        p.getProperty("keyAlias"),
+        p.getProperty("keyPassword"),
+    )
+}
+
+val releaseKey = findReleaseKey()
+
 plugins {
     // AGP 9 trae Kotlin integrado: no se aplica org.jetbrains.kotlin.android.
     alias(libs.plugins.android.application)
@@ -15,8 +49,19 @@ android {
         applicationId = "app.mimusica"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+    }
+
+    signingConfigs {
+        if (releaseKey != null) {
+            create("release") {
+                storeFile = releaseKey.file
+                storePassword = releaseKey.storePassword
+                keyAlias = releaseKey.alias
+                keyPassword = releaseKey.keyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -27,9 +72,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Hasta tener una firma propia, la APK release se firma con la clave debug
-            // para que se pueda instalar manualmente. Ver docs/01-PLAN.md.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

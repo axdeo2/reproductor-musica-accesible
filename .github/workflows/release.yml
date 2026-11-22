@@ -1,0 +1,85 @@
+name: Publicar Release
+
+# Al subir una etiqueta vX.Y.Z se compila la APK firmada y se adjunta a la Release
+# de GitHub, con un enlace de descarga directa (sin .zip ni cuenta de GitHub).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Etiqueta existente (p. ej. v0.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Verificar que existe la clave de firma
+        id: key
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::Faltan los secretos RELEASE_*: no se publica la APK (ver docs/06-RELEASES.md)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ok == 'true'
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-java@v4
+        if: steps.key.outputs.ok == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.key.outputs.ok == 'true'
+
+      - name: Compilar APK firmada
+        if: steps.key.outputs.ok == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          export RELEASE_KEYSTORE_FILE="$RUNNER_TEMP/musica-release.jks"
+          echo "$KEYSTORE_B64" | base64 -d > "$RELEASE_KEYSTORE_FILE"
+          bash scripts/verificar-modo-nina-sin-red.sh
+          ./gradlew --no-daemon assembleRelease testDebugUnitTest
+          rm -f "$RELEASE_KEYSTORE_FILE"
+          cp app/build/outputs/apk/release/app-release.apk "musica-${TAG}.apk"
+          cp app/build/outputs/apk/release/app-release.apk musica.apk
+
+      - name: Comprobar que no está firmada con la clave debug
+        if: steps.key.outputs.ok == 'true'
+        run: |
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$APKSIGNER" verify --print-certs "musica-${TAG}.apk" | tee /tmp/cert.txt
+          if grep -q "CN=Android Debug" /tmp/cert.txt; then
+            echo "::error::La APK salió firmada con la clave debug."
+            exit 1
+          fi
+
+      - name: Crear o actualizar la Release
+        if: steps.key.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "musica-${TAG}.apk" musica.apk --clobber
+          else
+            gh release create "$TAG" "musica-${TAG}.apk" musica.apk --title "Música ${TAG}" --generate-notes
+          fi
