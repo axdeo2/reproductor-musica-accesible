@@ -73,8 +73,9 @@ class OnlineSession(
     private fun applySession(s: AccountSession?) {
         innerTube.replaceSession(
             cookie = s?.cookie,
-            visitorData = s?.visitorData,
-            dataSyncId = s?.dataSyncId,
+            visitorData = s?.visitorData?.let(::sanitizeVisitorData),
+            // Se limpia aquí (no solo al iniciar sesión) para arreglar también sesiones ya guardadas.
+            dataSyncId = sanitizeDataSyncId(s?.dataSyncId),
             authUser = s?.authUser ?: "0",
             useLoginForBrowse = s != null,
         )
