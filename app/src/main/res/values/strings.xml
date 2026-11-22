@@ -3,4 +3,5 @@
     <string name="app_name">Música</string>
     <string name="cd_app_logo">Logo de Música</string>
     <string name="empty_library">Todavía no hay videos</string>
+    <string name="empty_library_hint">Para agregar música: mantén presionado el logo rojo de arriba a la izquierda durante 5 segundos.</string>
 </resources>

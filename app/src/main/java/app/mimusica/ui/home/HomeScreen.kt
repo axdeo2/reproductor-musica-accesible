@@ -35,7 +35,16 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -60,7 +69,6 @@ import app.mimusica.ui.components.AppLogo
 import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 
 /** Tiempo que hay que mantener presionado el logo para abrir la zona del cuidador. */
@@ -138,7 +146,18 @@ private fun TopBar(onOpenCaregiver: () -> Unit) {
             .padding(horizontal = Dimens.Separacion),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Acceso oculto: mantener presionado 5 s. Un toque corto no hace nada visible.
+        // Acceso oculto: mantener presionado 5 s sin soltar ni salirse del logo.
+        // Un toque corto no hace nada visible; el anillo solo aparece tras ~1 s de presión.
+        var holding by remember { mutableStateOf(false) }
+        val progress = remember { Animatable(0f) }
+        LaunchedEffect(holding) {
+            if (holding) {
+                progress.snapTo(0f)
+                progress.animateTo(1f, tween(CAREGIVER_HOLD_MS.toInt(), easing = LinearEasing))
+            } else {
+                progress.snapTo(0f)
+            }
+        }
         Box(
             Modifier
                 .size(Dimens.TocableMinimo)
@@ -146,13 +165,32 @@ private fun TopBar(onOpenCaregiver: () -> Unit) {
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
-                        val released = withTimeoutOrNull(CAREGIVER_HOLD_MS) { waitForUpOrCancellation() }
-                        if (released == null) open()
+                        holding = true
+                        // Solo se abre si se cumplen los 5 s. Soltar o salirse del logo
+                        // (waitForUpOrCancellation termina antes) cancela.
+                        var completed = true
+                        try {
+                            withTimeoutOrNull(CAREGIVER_HOLD_MS) {
+                                waitForUpOrCancellation()
+                                completed = false
+                            }
+                        } finally {
+                            holding = false
+                        }
+                        if (completed) open()
                     }
                 },
             contentAlignment = Alignment.Center,
         ) {
-            AppLogo(ancho = 48.dp)
+            if (progress.value > 0.2f) {
+                CircularProgressIndicator(
+                    progress = { progress.value },
+                    color = Colores.Rojo,
+                    strokeWidth = 4.dp,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            AppLogo(ancho = 40.dp)
         }
     }
 }
@@ -167,6 +205,15 @@ private fun EmptyState() {
                 text = stringResource(R.string.empty_library),
                 color = Colores.Gris,
                 style = MaterialTheme.typography.bodyLarge,
+            )
+            Spacer(Modifier.height(Dimens.Separacion * 2))
+            // Pista para el cuidador; solo se ve mientras no hay canciones guardadas.
+            Text(
+                text = stringResource(R.string.empty_library_hint),
+                color = Colores.Gris,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = Dimens.Separacion * 2),
             )
         }
     }
