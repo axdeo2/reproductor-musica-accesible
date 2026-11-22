@@ -33,7 +33,27 @@ Además, se puede **bloquear** para que ella no salga de la app por accidente.
 Kotlin · Jetpack Compose · Media3 (ExoPlayer) · Coil (miniaturas de video) · DataStore ·
 Storage Access Framework · Lock Task Mode (kiosco).
 
-## Uso previsto
+## Compilar e instalar
 
-Uso **privado** en el celular de la niña, instalado manualmente (APK). No se publicará en Google
-Play. Ver la nota sobre el ícono en [docs/03-ACCESIBILIDAD-Y-DISENO.md](docs/03-ACCESIBILIDAD-Y-DISENO.md#ícono-de-la-app).
+**Sin compilar:** cada push a `main` genera las APK en GitHub Actions
+(pestaña *Actions* → último run → artefacto `musica-apk-…`). Descomprimir e instalar
+`app-release.apk` en el celular (permitir "instalar apps desconocidas").
+
+**Localmente** (JDK 17 + Android SDK 35):
+
+```
+./gradlew assembleRelease
+adb install app/build/outputs/apk/release/app-release.apk
+```
+
+> La APK release todavía se firma con la clave *debug* para que se pueda instalar sin más pasos.
+> Antes de distribuirla ampliamente hay que crear una firma propia.
+
+## Proyecto open-source
+
+El proyecto es abierto para que otras familias, terapeutas y fundaciones puedan usarlo y
+adaptarlo. No usa ni contiene marcas, logos ni contenido de YouTube/Google: solo imita el
+*estilo* de interfaz que la usuaria ya conoce. Ver la nota sobre el ícono en
+[docs/03-ACCESIBILIDAD-Y-DISENO.md](docs/03-ACCESIBILIDAD-Y-DISENO.md#8-ícono-de-la-app).
+
+La app no trae videos: cada familia copia al celular la música que ya tiene legítimamente.

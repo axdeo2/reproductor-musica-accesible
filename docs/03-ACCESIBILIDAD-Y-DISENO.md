@@ -85,11 +85,13 @@ conservando la apariencia de YouTube que ella ya conoce (familiaridad = menos ap
 La familia quiere un ícono **rojo tipo "botón de play"**, que la niña asocie con su música:
 rectángulo redondeado rojo con triángulo blanco al centro.
 
-> **Nota:** el logo exacto de YouTube y el nombre "YouTube" son marcas registradas de Google.
-> Para este uso **privado e instalado manualmente** se dibujará un ícono propio (vector
-> adaptativo) con el mismo concepto visual — rojo, redondeado, triángulo blanco — sin copiar el
-> archivo oficial ni usar el nombre "YouTube". La app **no debe publicarse en Google Play** con
-> ese ícono.
+> **Nota (proyecto open-source):** el logo y el nombre "YouTube" son marcas registradas de
+> Google. Por eso el ícono es un **dibujo propio** (vector adaptativo en
+> `app/src/main/res/drawable/ic_launcher_foreground.xml`) con el concepto genérico de "botón de
+> play" — rojo, redondeado, triángulo blanco — sin copiar el archivo oficial ni usar el nombre
+> "YouTube" en la app, el código o el repositorio. Si alguna vez se publica en una tienda
+> (Google Play, F-Droid), conviene cambiar el ícono por uno menos parecido para evitar reclamos
+> por confusión de marca.
 
 Nombre visible de la app sugerido: **"Música"** (o el nombre de la niña, p. ej. "Música de ___").
 
