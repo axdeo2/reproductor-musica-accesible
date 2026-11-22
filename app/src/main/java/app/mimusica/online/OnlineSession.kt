@@ -12,6 +12,8 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -57,20 +59,38 @@ class OnlineSession(
 
     val sessionFlow = accounts.session
 
+    private val restoreLock = Mutex()
+    private var restored = false
+    private var current: AccountSession? = null
+
     /** Carga la sesión guardada (si existe) en el cliente. */
-    suspend fun restore(): AccountSession? = accounts.session.first().also(::applySession)
+    suspend fun restore(): AccountSession? = restoreLock.withLock {
+        accounts.session.first().also {
+            applySession(it)
+            restored = true
+        }
+    }
+
+    /** Como [restore], pero solo la primera vez (para el modo niña, que lo llama a menudo). */
+    suspend fun ensureRestored(): AccountSession? {
+        if (restored) return current
+        return restore()
+    }
 
     suspend fun signIn(session: AccountSession) {
         accounts.save(session)
         applySession(session)
+        restored = true
     }
 
     suspend fun signOut() {
         accounts.clear()
         applySession(null)
+        restored = true
     }
 
     private fun applySession(s: AccountSession?) {
+        current = s
         innerTube.replaceSession(
             cookie = s?.cookie,
             visitorData = s?.visitorData?.let(::sanitizeVisitorData),

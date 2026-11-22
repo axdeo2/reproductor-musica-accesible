@@ -32,6 +32,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,6 +131,7 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
                         showLogin = false
                         tab = 0
                         load { liked = online.library.likedSongs() }
+                        container.recommendations.refresh(force = true)
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -146,9 +149,35 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
                     online.signOut()
                     clearWebLoginCookies()
                     liked = null; playlists = null; openPlaylist = null; playlistTracks = null
+                    container.recommendations.refresh(force = true)
                 }
             },
         )
+
+        val showRecs by container.childSettings.showRecommendations.collectAsState()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.Separacion),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Mostrar \"Para ti\" en el modo niña", color = Colores.Blanco)
+                Text(
+                    "Recomendaciones de la cuenta, reproducidas con internet (sin anuncios).",
+                    color = Colores.Gris,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = showRecs,
+                onCheckedChange = {
+                    container.childSettings.setShowRecommendations(it)
+                    scope.launch { container.recommendations.refresh(force = true) }
+                },
+                colors = SwitchDefaults.colors(checkedTrackColor = Colores.Rojo),
+            )
+        }
 
         if (openPlaylist != null) {
             TrackList(

@@ -16,9 +16,10 @@ que ya sabe usar YouTube pero se pierde cuando un anuncio la saca de la aplicaci
 
 Una app con **dos partes**:
 
-- **Modo niña (sin conexión):** se ve y se usa como YouTube (lista de videos, reproductor pequeño
-  arriba con más videos abajo, pantalla completa horizontal), sin anuncios ni enlaces hacia
-  afuera. Solo reproduce videos que ya están guardados en el celular.
+- **Modo niña:** se ve y se usa como YouTube (video arriba, miniaturas abajo para cambiar), sin
+  anuncios ni enlaces hacia afuera. Muestra dos secciones: **"Para ti"** (recomendaciones de la
+  cuenta de YouTube Music, con internet) y **"En el celular"** (canciones guardadas, funcionan
+  sin internet). El cuidador puede apagar "Para ti".
 - **Zona de descargas (cuidador, con PIN):** el cuidador inicia sesión con su cuenta de Google,
   ve su biblioteca y sus "me gusta" de YouTube Music y descarga al celular las canciones que
   quiera. También puede agregar una carpeta con videos ya descargados por otros medios.

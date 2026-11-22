@@ -67,6 +67,21 @@ niña se ve la miniatura grande.
 
 Tamaño aproximado por canción de 4 minutos: audio ~4 MB; video 480p ~15–25 MB.
 
+## 4b. "Para ti" en el modo niña (desde v0.3.0)
+
+- `online/RecommendationsRepository` lee el inicio de YouTube Music de la cuenta
+  (`FEmusic_home`, 3 páginas, máx. 60 elementos reproducibles), baja las miniaturas a
+  `cacheDir/para-ti/` y entrega `PlayableItem` con miniatura local. Se refresca cada 30 min.
+- `online/OnlineStreamResolver` pide los enlaces al tocar una canción: video + audio (con
+  PoToken) o solo audio. Usa clientes sin rangos obligatorios para que ExoPlayer los
+  reproduzca directo (probado en PC: audio en línea OK con el cliente `VISIONOS`).
+- `playback/SimplePlayer` lleva su propia cola: si una canción falla (sin internet) salta a la
+  siguiente y se detiene si todas fallan.
+- Si una recomendación ya está guardada, se reproduce desde el celular.
+- Sin sesión, sin internet o con el interruptor del cuidador apagado, la sección no aparece.
+- El contenido depende de la cuenta conectada: conviene usar una cuenta cuyo historial sea
+  apropiado para la niña.
+
 ## 5. Pendiente / siguientes pasos
 
 1. **Probar en un celular**: inicio de sesión real, "me gusta", listas, descarga con video

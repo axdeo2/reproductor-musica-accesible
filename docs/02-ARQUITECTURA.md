@@ -2,11 +2,11 @@
 
 ## 1. Principios
 
-1. **El modo niña no usa la red.** Solo la **zona de descargas** del cuidador (detrás del PIN)
-   se conecta a internet para iniciar sesión con Google, ver la biblioteca y descargar
-   (ver [05-ZONA-DESCARGAS.md](05-ZONA-DESCARGAS.md)). Las pantallas de la niña solo leen
-   archivos locales: no hay anuncios, analítica ni enlaces externos, y la app no lanza
-   `Intent`s hacia otras apps (ni compartir, ni navegador).
+1. **El modo niña nunca sale de la app.** Puede reproducir recomendaciones "Para ti" con
+   internet, pero su código no toca la red: recibe interfaces (`RecommendationsSource`,
+   `OnlineStreams`) y miniaturas ya guardadas como archivos. Todo lo que habla con YouTube
+   vive en `online/` (ver [05-ZONA-DESCARGAS.md](05-ZONA-DESCARGAS.md)). No hay anuncios,
+   analítica ni enlaces externos, y la app no lanza `Intent`s hacia otras apps.
 2. **Nunca un callejón sin salida.** Cualquier error (video dañado, carpeta movida) se resuelve
    solo: se salta al siguiente video o se vuelve a Inicio. La niña nunca ve un diálogo de error.
 3. **Siempre suena algo.** Al terminar un video sigue el siguiente; al terminar la lista, vuelve

@@ -21,12 +21,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -64,30 +68,35 @@ import androidx.media3.common.Player
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.mimusica.R
-import app.mimusica.data.DownloadedItem
+import app.mimusica.data.PlayableItem
 import app.mimusica.ui.components.AppLogo
 import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
 import coil3.compose.AsyncImage
-import java.io.File
 
 /** Tiempo que hay que mantener presionado el logo para abrir la zona del cuidador. */
 private const val CAREGIVER_HOLD_MS = 5_000L
 
 /**
- * Pantalla Inicio (modo niña): miniaturas grandes de lo que está guardado en el celular.
- * Solo recibe datos locales; no conoce nada de la red.
+ * Pantalla Inicio (modo niña), al estilo YouTube: el video arriba y debajo las miniaturas
+ * para cambiar de canción, en dos secciones:
+ *  - "Para ti": recomendaciones de la cuenta (en línea; desaparece si no hay internet).
+ *  - "En el celular": canciones guardadas (funcionan siempre, sin internet).
+ *
+ * No conoce nada de la red: recibe listas de [PlayableItem] con miniaturas locales.
  */
 @Composable
 fun HomeScreen(
-    items: List<DownloadedItem>,
-    thumbnailOf: (DownloadedItem) -> File?,
+    recommended: List<PlayableItem>,
+    downloaded: List<PlayableItem>,
     currentId: String?,
     isPlaying: Boolean,
-    /** Reproductor para la superficie de video; el video se muestra solo si la canción lo tiene. */
+    isLoading: Boolean,
+    hasVideo: Boolean,
+    /** Reproductor para la superficie de video. */
     player: Player,
-    hasVideo: (DownloadedItem) -> Boolean,
-    onPlay: (index: Int) -> Unit,
+    /** Reproduce [queue] empezando en [index] (la cola es la sección tocada). */
+    onPlay: (queue: List<PlayableItem>, index: Int) -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -104,15 +113,14 @@ fun HomeScreen(
     ) {
         TopBar(onOpenCaregiver)
 
-        // Como YouTube: el video arriba y la lista para cambiar de canción debajo.
-        val current = items.firstOrNull { it.videoId == currentId }
+        val current = recommended.firstOrNull { it.id == currentId } ?: downloaded.firstOrNull { it.id == currentId }
         if (current != null) {
-            NowPlaying(current, thumbnailOf(current), hasVideo(current), player)
+            NowPlaying(current, hasVideo, isLoading, player)
             Controls(isPlaying, onTogglePlay, onNext, onPrevious)
         }
 
         Box(Modifier.weight(1f)) {
-            if (items.isEmpty()) {
+            if (recommended.isEmpty() && downloaded.isEmpty()) {
                 EmptyState()
             } else {
                 LazyVerticalGrid(
@@ -121,17 +129,39 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(Dimens.Separacion),
                     verticalArrangement = Arrangement.spacedBy(Dimens.Separacion),
                 ) {
-                    itemsIndexed(items, key = { _, it -> it.videoId }) { index, item ->
-                        VideoCard(
-                            item = item,
-                            thumbnail = thumbnailOf(item),
-                            isCurrent = item.videoId == currentId,
-                            onClick = { onPlay(index) },
-                        )
-                    }
+                    section("para-ti", Icons.Filled.AutoAwesome, "Para ti", recommended, currentId, onPlay)
+                    section("celular", Icons.Filled.PhoneAndroid, "En el celular", downloaded, currentId, onPlay)
                 }
             }
         }
+    }
+}
+
+private fun LazyGridScope.section(
+    key: String,
+    icon: ImageVector,
+    label: String,
+    items: List<PlayableItem>,
+    currentId: String?,
+    onPlay: (List<PlayableItem>, Int) -> Unit,
+) {
+    if (items.isEmpty()) return
+    item(key = "header-$key", span = { GridItemSpan(maxLineSpan) }) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Icon(icon, null, tint = Colores.Rojo, modifier = Modifier.size(Dimens.IconoMinimo))
+            Text(label, color = Colores.Blanco, style = MaterialTheme.typography.titleLarge)
+        }
+    }
+    itemsIndexed(items, key = { _, it -> "$key-${it.id}" }) { index, item ->
+        VideoCard(
+            item = item,
+            isCurrent = item.id == currentId,
+            onClick = { onPlay(items, index) },
+        )
     }
 }
 
@@ -220,7 +250,8 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun VideoCard(item: DownloadedItem, thumbnail: File?, isCurrent: Boolean, onClick: () -> Unit) {
+private fun VideoCard(item: PlayableItem, isCurrent: Boolean, onClick: () -> Unit) {
+    val thumbnail = item.thumbnail
     Column(
         Modifier
             .fillMaxWidth()
@@ -286,7 +317,8 @@ private fun VideoCard(item: DownloadedItem, thumbnail: File?, isCurrent: Boolean
 }
 
 @Composable
-private fun NowPlaying(item: DownloadedItem, thumbnail: File?, hasVideo: Boolean, player: Player) {
+private fun NowPlaying(item: PlayableItem, hasVideo: Boolean, isLoading: Boolean, player: Player) {
+    val thumbnail = item.thumbnail
     Box(
         Modifier
             .fillMaxWidth()
@@ -315,6 +347,9 @@ private fun NowPlaying(item: DownloadedItem, thumbnail: File?, hasVideo: Boolean
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
+        }
+        if (isLoading) {
+            CircularProgressIndicator(color = Colores.Rojo, strokeWidth = 6.dp, modifier = Modifier.size(64.dp))
         }
     }
 }

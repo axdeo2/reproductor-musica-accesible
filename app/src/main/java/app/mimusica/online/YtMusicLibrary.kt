@@ -38,6 +38,13 @@ class YtMusicLibrary(private val tube: InnerTube) {
     /** Canciones que te gustan (lista especial "LM"). */
     suspend fun likedSongs(maxPages: Int = 30): List<RemoteTrack> = playlistTracks("VLLM", maxPages)
 
+    /** Página de inicio de YouTube Music de la cuenta ("Para ti"): solo elementos reproducibles. */
+    suspend fun homeFeed(maxPages: Int = 3): List<RemoteTrack> {
+        val out = LinkedHashMap<String, RemoteTrack>()
+        paginate("FEmusic_home", maxPages) { root -> collectHomeItems(root, out) }
+        return out.values.toList()
+    }
+
     /** Listas guardadas en la biblioteca. */
     suspend fun libraryPlaylists(maxPages: Int = 10): List<RemotePlaylist> {
         val out = LinkedHashMap<String, RemotePlaylist>()
@@ -180,4 +187,28 @@ internal fun collectPlaylists(root: JsonElement, out: MutableMap<String, RemoteP
         if (browseId == null || !browseId.startsWith("VL") || title == null) return@forEachObject
         out.putIfAbsent(browseId, RemotePlaylist(browseId, title, subtitle, upscaleThumbnail(thumb)))
     }
+}
+
+/**
+ * Inicio de YouTube Music: carruseles con tarjetas (`musicTwoRowItemRenderer`) y listas
+ * rápidas (`musicResponsiveListItemRenderer`). Solo se toman los que se pueden reproducir
+ * (tienen `watchEndpoint.videoId`); álbumes, listas y artistas se ignoran.
+ */
+internal fun collectHomeItems(root: JsonElement, out: MutableMap<String, RemoteTrack>) {
+    forEachObject(root) { o ->
+        val two = o["musicTwoRowItemRenderer"] as? JsonObject ?: return@forEachObject
+        val videoId = two.path("navigationEndpoint", "watchEndpoint", "videoId").str() ?: return@forEachObject
+        val title = two.path("title").runsText() ?: return@forEachObject
+        val subtitle = two.path("subtitle").runsText().orEmpty()
+        val thumb = two.path("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails").lastThumbnail()
+        out.putIfAbsent(videoId, RemoteTrack(videoId, title, cleanSubtitle(subtitle), null, upscaleThumbnail(thumb)))
+    }
+    collectTracks(root, out)
+}
+
+/** "Canción • Artista • 2,3 M reproducciones" → "Artista". */
+internal fun cleanSubtitle(subtitle: String): String {
+    val parts = subtitle.split(" • ").map { it.trim() }.filter { it.isNotEmpty() }
+    val kinds = setOf("Canción", "Song", "Video", "Sencillo", "Single", "Episodio", "Episode")
+    return parts.dropWhile { it in kinds }.firstOrNull().orEmpty()
 }
