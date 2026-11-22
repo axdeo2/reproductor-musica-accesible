@@ -89,7 +89,8 @@ private const val CAREGIVER_HOLD_MS = 5_000L
 fun HomeScreen(
     recommended: List<PlayableItem>,
     downloaded: List<PlayableItem>,
-    currentId: String?,
+    /** Canción que suena (puede ser de "Para ti" aunque la sección esté oculta sin internet). */
+    current: PlayableItem?,
     isPlaying: Boolean,
     isLoading: Boolean,
     hasVideo: Boolean,
@@ -113,7 +114,7 @@ fun HomeScreen(
     ) {
         TopBar(onOpenCaregiver)
 
-        val current = recommended.firstOrNull { it.id == currentId } ?: downloaded.firstOrNull { it.id == currentId }
+        val currentId = current?.id
         if (current != null) {
             NowPlaying(current, hasVideo, isLoading, player)
             Controls(isPlaying, onTogglePlay, onNext, onPrevious)

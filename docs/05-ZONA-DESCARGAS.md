@@ -79,6 +79,10 @@ Tamaño aproximado por canción de 4 minutos: audio ~4 MB; video 480p ~15–25 M
   siguiente y se detiene si todas fallan.
 - Si una recomendación ya está guardada, se reproduce desde el celular.
 - Sin sesión, sin internet o con el interruptor del cuidador apagado, la sección no aparece.
+- **Detección automática de internet** (`data/ConnectivityMonitor`, desde v0.3.1): usa la red
+  con internet *verificado* por Android. Al perderse, "Para ti" se oculta al instante; la
+  canción en línea que suena termina lo que ya cargó y el reproductor sigue con las canciones
+  descargadas. Al volver el internet, "Para ti" reaparece y se actualiza.
 - El contenido depende de la cuenta conectada: conviene usar una cuenta cuyo historial sea
   apropiado para la niña.
 

@@ -36,7 +36,14 @@ class MainActivity : ComponentActivity() {
         val container = (application as MusicApp).container
         val library = container.localLibrary
         val recommendations = container.recommendations
-        player = SimplePlayer(this, lifecycleScope, container.onlineStreams)
+        val connectivity = container.connectivity
+        player = SimplePlayer(
+            context = this,
+            scope = lifecycleScope,
+            online = container.onlineStreams,
+            hasInternet = { connectivity.isOnline.value },
+            offlineFallback = { library.items.value.map { it.toPlayable(library) } },
+        )
 
         setContent {
             MiMusicaTheme {
@@ -44,22 +51,25 @@ class MainActivity : ComponentActivity() {
                 val saved by library.items.collectAsState()
                 val recs by recommendations.items.collectAsState()
                 val showRecs by container.childSettings.showRecommendations.collectAsState()
+                val hasInternet by connectivity.isOnline.collectAsState()
                 val currentId by player.currentId.collectAsState()
                 val isPlaying by player.isPlaying.collectAsState()
                 val isLoading by player.isLoading.collectAsState()
                 val hasVideo by player.hasVideo.collectAsState()
 
-                LaunchedEffect(caregiver, showRecs) {
+                LaunchedEffect(caregiver, showRecs, hasInternet) {
                     if (!caregiver) {
                         library.refresh()
-                        recommendations.refresh(force = false)
+                        // Al volver el internet se actualiza "Para ti".
+                        if (hasInternet) recommendations.refresh(force = false)
                     }
                 }
 
                 val downloaded = remember(saved) { saved.map { it.toPlayable(library) } }
                 // Si una recomendación ya está guardada, se reproduce desde el celular.
-                val recommended = remember(recs, downloaded, showRecs) {
-                    if (!showRecs) emptyList()
+                // Sin internet solo se muestran las canciones descargadas.
+                val recommended = remember(recs, downloaded, showRecs, hasInternet) {
+                    if (!showRecs || !hasInternet) emptyList()
                     else {
                         val byId = downloaded.associateBy { it.id }
                         recs.map { byId[it.id] ?: it }
@@ -72,7 +82,9 @@ class MainActivity : ComponentActivity() {
                     HomeScreen(
                         recommended = recommended,
                         downloaded = downloaded,
-                        currentId = currentId,
+                        current = remember(currentId, recs, downloaded) {
+                            downloaded.firstOrNull { it.id == currentId } ?: recs.firstOrNull { it.id == currentId }
+                        },
                         isPlaying = isPlaying,
                         isLoading = isLoading,
                         hasVideo = hasVideo,

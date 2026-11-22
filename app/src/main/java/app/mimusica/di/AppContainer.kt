@@ -2,6 +2,7 @@ package app.mimusica.di
 
 import android.content.Context
 import app.mimusica.data.ChildSettings
+import app.mimusica.data.ConnectivityMonitor
 import app.mimusica.data.LocalLibrary
 import app.mimusica.data.RecommendationsSource
 import app.mimusica.online.AccountStore
@@ -27,6 +28,7 @@ class AppContainer(context: Context) {
 
     val localLibrary = LocalLibrary(File(appContext.filesDir, "descargas"))
     val childSettings = ChildSettings(appContext)
+    val connectivity = ConnectivityMonitor(appContext)
 
     val online: OnlineSession by lazy { OnlineSession(AccountStore(appContext), AppTokenProvider(appContext)) }
     val downloads: DownloadQueue by lazy { DownloadQueue(online, localLibrary, appScope) }

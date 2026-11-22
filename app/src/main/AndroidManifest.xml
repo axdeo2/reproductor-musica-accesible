@@ -7,6 +7,8 @@
       El modo niña reproduce archivos locales; CI verifica que su código no importe nada de red.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Solo para saber si hay internet y mostrar únicamente lo descargado cuando no hay. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".MusicApp"

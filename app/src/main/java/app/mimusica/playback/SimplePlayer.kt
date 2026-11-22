@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
  *
  * Reglas del proyecto: la cola se repite; si una canción falla (archivo dañado, sin internet)
  * salta a la siguiente sin mostrar errores, y se detiene si TODAS fallan (nunca un bucle infinito).
+ * Si se corta el internet durante una canción en línea, sigue con las canciones descargadas.
  *
  * Provisional hasta la fase 2 (MediaSessionService, pantalla completa).
  */
@@ -38,6 +39,10 @@ class SimplePlayer(
     private val context: Context,
     private val scope: CoroutineScope,
     private val online: OnlineStreams?,
+    /** true si hay internet verificado. */
+    private val hasInternet: () -> Boolean = { true },
+    /** Canciones guardadas para seguir sonando si se corta el internet. */
+    private val offlineFallback: () -> List<PlayableItem> = { emptyList() },
 ) {
     private val localSources = ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
 
@@ -103,6 +108,14 @@ class SimplePlayer(
     fun next() {
         if (queue.isEmpty()) return
         index = (index + 1) % queue.size
+        // Sin internet no se intenta la siguiente canción en línea: se pasa a las descargadas.
+        if (queue[index].isOnline && !hasInternet()) {
+            val saved = offlineFallback()
+            if (saved.isNotEmpty()) {
+                playQueue(saved, 0)
+                return
+            }
+        }
         load()
     }
 
@@ -141,6 +154,14 @@ class SimplePlayer(
     }
 
     private fun skipAfterFailure() {
+        // Se cortó el internet con una canción en línea: seguir con las descargadas.
+        if (queue.getOrNull(index)?.isOnline == true && !hasInternet()) {
+            val saved = offlineFallback()
+            if (saved.isNotEmpty() && saved !== queue) {
+                playQueue(saved, 0)
+                return
+            }
+        }
         consecutiveFailures++
         if (consecutiveFailures >= queue.size) {
             // Todo falló (p. ej. solo hay recomendaciones y no hay internet): detenerse.
