@@ -1,5 +1,6 @@
 package app.mimusica.data
 
+import android.net.Uri
 import java.io.File
 
 /**
@@ -17,8 +18,14 @@ data class PlayableItem(
     val thumbnail: File?,
     val audioFile: File? = null,
     val videoFile: File? = null,
+    /** Archivo de la carpeta del celular (video o audio en un solo archivo). */
+    val localUri: Uri? = null,
+    val localIsVideo: Boolean = false,
 ) {
-    val isOnline: Boolean get() = audioFile == null
+    val isOnline: Boolean get() = audioFile == null && localUri == null
+
+    /** Lo que se muestra como miniatura: la imagen guardada o un cuadro del propio video. */
+    val thumbnailModel: Any? get() = thumbnail ?: localUri?.takeIf { localIsVideo }
 }
 
 fun DownloadedItem.toPlayable(library: LocalLibrary) = PlayableItem(

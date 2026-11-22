@@ -138,3 +138,20 @@ a pantalla completa; girar a vertical sale.
 - **Instrumentadas (Compose UI tests):** tocar miniatura → reproduce; Atrás en Inicio no sale;
   la zona del cuidador no se abre con toques cortos.
 - **Manual con la usuaria:** observación de sesiones reales (ver fase 7 del plan).
+
+## 8. Estado actual (v0.5.0)
+
+- **Reproductor en la aplicación** (`AppContainer.player`) publicado por
+  `playback/PlaybackService` (Media3 `MediaSessionService`): sigue sonando con la pantalla
+  apagada, notificación con controles, botones de audífonos (siguiente/anterior usan la cola
+  propia mediante un `ForwardingPlayer`), pausa con llamadas y al desconectar audífonos.
+- **Última canción**: `data/PlaybackMemoryStore` guarda id + posición cada 5 s; al abrir la app
+  queda lista en pausa.
+- **Internet**: `data/ConnectivityMonitor` combina el estado de Android con una comprobación real
+  (`online/InternetProbe`, `generate_204`, cada 15 s). Sin internet, Inicio solo muestra
+  "En el celular" y aparece un ícono de nube tachada junto al logo.
+- **Volumen máximo**: `playback/VolumeLimiter` baja el volumen del sistema al límite elegido.
+- **Carpeta del celular**: `data/FolderLibrary` (SAF, hasta 3 niveles), miniaturas con
+  `coil-video` (cuadro del video).
+- **Anti-toques**: `ui/components/SafeClickable` (al soltar, tolerancia 24 dp, sin multitoque,
+  anti-rebote 600 ms, vibración).

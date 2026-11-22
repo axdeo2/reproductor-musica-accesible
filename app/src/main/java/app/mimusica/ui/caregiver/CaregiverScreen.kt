@@ -154,46 +154,6 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
             },
         )
 
-        val showRecs by container.childSettings.showRecommendations.collectAsState()
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.Separacion),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Mostrar \"Para ti\" en el modo niña", color = Colores.Texto)
-                Text(
-                    "Recomendaciones de la cuenta, reproducidas con internet (sin anuncios).",
-                    color = Colores.Gris,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = showRecs,
-                onCheckedChange = {
-                    container.childSettings.setShowRecommendations(it)
-                    scope.launch { container.recommendations.refresh(force = true) }
-                },
-                colors = SwitchDefaults.colors(checkedTrackColor = Colores.Rojo),
-            )
-        }
-
-        val darkTheme by container.childSettings.darkTheme.collectAsState()
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.Separacion),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("Tema oscuro", color = Colores.Texto, modifier = Modifier.weight(1f))
-            Switch(
-                checked = darkTheme,
-                onCheckedChange = { container.childSettings.setDarkTheme(it) },
-                colors = SwitchDefaults.colors(checkedTrackColor = Colores.Rojo),
-            )
-        }
-
         if (openPlaylist != null) {
             TrackList(
                 tracks = playlistTracks,
@@ -207,7 +167,7 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
         }
 
         PrimaryTabRow(selectedTabIndex = tab, containerColor = Colores.Fondo) {
-            listOf("Me gusta", "Mis listas", "En el celular (${localItems.size})").forEachIndexed { i, label ->
+            listOf("Me gusta", "Mis listas", "Descargadas (${localItems.size})", "Ajustes").forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
             }
         }
@@ -238,9 +198,10 @@ fun CaregiverScreen(container: AppContainer, onExit: () -> Unit) {
                     load { playlistTracks = online.library.playlistTracks(p.browseId) }
                 }
             }
-            else -> SavedList(localItems) { item ->
+            2 -> SavedList(localItems) { item ->
                 scope.launch { container.localLibrary.delete(item.videoId) }
             }
+            else -> SettingsTab(container)
         }
     }
 }

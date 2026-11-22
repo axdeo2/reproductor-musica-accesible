@@ -3,6 +3,8 @@ package app.mimusica.playback
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
@@ -47,6 +49,8 @@ class SimplePlayer(
     private val hasInternet: () -> Boolean = { true },
     /** Canciones guardadas para seguir sonando si se corta el internet. */
     private val offlineFallback: () -> List<PlayableItem> = { emptyList() },
+    /** Guarda la última canción y su posición para retomarla al volver a abrir la app. */
+    private val memory: PlaybackMemory? = null,
 ) {
     private val localSources = ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
 
@@ -67,7 +71,22 @@ class SimplePlayer(
         .build()
 
     /** Expuesto para conectar la superficie de video (PlayerView). */
-    val player: ExoPlayer = ExoPlayer.Builder(context).setLoadControl(loadControl).build()
+    val player: ExoPlayer = ExoPlayer.Builder(context)
+        .setLoadControl(loadControl)
+        // Pausa si suena una llamada u otra app reproduce audio; reanuda al terminar.
+        .setAudioAttributes(
+            AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
+            /* handleAudioFocus = */ true,
+        )
+        // Pausa si se desconectan los audífonos (para que no suene de golpe por el parlante).
+        .setHandleAudioBecomingNoisy(true)
+        // Mantiene CPU y WiFi despiertos con la pantalla apagada mientras suena.
+        .setWakeMode(C.WAKE_MODE_NETWORK)
+        .build()
+
+    /** true si hay una cola cargada (para no reemplazarla al restaurar). */
+    val hasQueue: Boolean get() = queue.isNotEmpty()
+    private var saveJob: Job? = null
 
     private var queue: List<PlayableItem> = emptyList()
     private var index = 0
@@ -97,6 +116,7 @@ class SimplePlayer(
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
+                if (isPlaying) startSaving() else saveNow()
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -123,6 +143,15 @@ class SimplePlayer(
         index = start.coerceIn(items.indices)
         consecutiveFailures = 0
         load()
+    }
+
+    /** Deja lista (en pausa) la última canción que sonaba, en el segundo donde iba. */
+    fun restore(items: List<PlayableItem>, start: Int, positionMs: Long) {
+        if (items.isEmpty() || hasQueue) return
+        queue = items
+        index = start.coerceIn(items.indices)
+        consecutiveFailures = 0
+        load(startPositionMs = positionMs, autoPlay = false)
     }
 
     fun togglePlayPause() {
@@ -157,17 +186,19 @@ class SimplePlayer(
     }
 
     fun release() {
+        saveNow()
+        saveJob?.cancel()
         loadJob?.cancel()
         prefetchJob?.cancel()
         stopBufferWatch()
         player.release()
     }
 
-    private fun load() {
+    private fun load(startPositionMs: Long = 0L, autoPlay: Boolean = true) {
         loadJob?.cancel()
         val item = queue.getOrNull(index) ?: return
         _currentId.value = item.id
-        _hasVideo.value = item.videoFile != null
+        _hasVideo.value = item.videoFile != null || item.localIsVideo
         _loadState.value = if (item.isOnline) LoadState.Searching else LoadState.Buffering(0)
         stopBufferWatch()
         player.stop()
@@ -179,10 +210,28 @@ class SimplePlayer(
                 skipAfterFailure()
                 return@launch
             }
-            player.setMediaSource(source)
+            player.setMediaSource(source, startPositionMs)
             player.prepare()
-            player.play()
+            player.playWhenReady = autoPlay
+            memory?.save(item.id, startPositionMs)
+            if (!autoPlay) _loadState.value = LoadState.Ready
         }
+    }
+
+    /** Guarda la posición cada 5 s mientras suena. */
+    private fun startSaving() {
+        if (saveJob?.isActive == true) return
+        saveJob = scope.launch {
+            while (isActive) {
+                delay(SAVE_EVERY_MS)
+                saveNow()
+            }
+        }
+    }
+
+    private fun saveNow() {
+        val id = _currentId.value ?: return
+        memory?.save(id, player.currentPosition.coerceAtLeast(0))
     }
 
     private fun skipAfterFailure() {
@@ -208,6 +257,7 @@ class SimplePlayer(
     }
 
     private fun localSource(item: PlayableItem): MediaSource {
+        item.localUri?.let { return localSources.createMediaSource(mediaItem(item, it)) }
         val audio = localSources.createMediaSource(mediaItem(item, Uri.fromFile(item.audioFile!!)))
         val video = item.videoFile ?: return audio
         return MergingMediaSource(localSources.createMediaSource(mediaItem(item, Uri.fromFile(video))), audio)
@@ -280,6 +330,7 @@ class SimplePlayer(
 
     private companion object {
         const val RESTART_THRESHOLD_MS = 3_000L
+        const val SAVE_EVERY_MS = 5_000L
         const val RESOLVE_TIMEOUT_MS = 25_000L
         /** Lo cargado necesario para empezar a sonar y para retomar tras un corte. */
         const val START_BUFFER_MS = 2_000L
@@ -292,6 +343,11 @@ class SimplePlayer(
         /** Los enlaces de YouTube duran horas; por seguridad se reutilizan solo 30 min. */
         const val PREFETCH_TTL_MS = 30L * 60_000L
     }
+}
+
+/** Dónde se guarda la última canción (implementación en data/). */
+interface PlaybackMemory {
+    fun save(id: String, positionMs: Long)
 }
 
 /** Etapas de carga que se muestran en pantalla. */

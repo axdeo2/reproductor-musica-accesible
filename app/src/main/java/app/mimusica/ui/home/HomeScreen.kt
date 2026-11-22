@@ -3,7 +3,6 @@ package app.mimusica.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -41,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,6 +57,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -74,6 +77,7 @@ import app.mimusica.playback.LoadState
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.mutableIntStateOf
 import app.mimusica.ui.components.AppLogo
+import app.mimusica.ui.components.safeClickable
 import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
 import coil3.compose.AsyncImage
@@ -106,6 +110,8 @@ fun HomeScreen(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onOpenCaregiver: () -> Unit,
+    /** Si hay internet (para mostrar el ícono de "sin conexión"). */
+    hasInternet: Boolean,
     /** Pantalla completa (horizontal). */
     fullscreen: Boolean,
     onFullscreenChange: (Boolean) -> Unit,
@@ -134,7 +140,7 @@ fun HomeScreen(
             .background(Colores.Fondo)
             .safeDrawingPadding()
     ) {
-        TopBar(onOpenCaregiver)
+        TopBar(onOpenCaregiver, hasInternet)
 
         val currentId = current?.id
         if (current != null) {
@@ -189,7 +195,7 @@ private fun LazyGridScope.section(
 }
 
 @Composable
-private fun TopBar(onOpenCaregiver: () -> Unit) {
+private fun TopBar(onOpenCaregiver: () -> Unit, hasInternet: Boolean) {
     val descripcionLogo = stringResource(R.string.cd_app_logo)
     val open by rememberUpdatedState(onOpenCaregiver)
     Row(
@@ -245,6 +251,16 @@ private fun TopBar(onOpenCaregiver: () -> Unit) {
             }
             AppLogo(ancho = 40.dp)
         }
+        if (!hasInternet) {
+            // Sin internet: solo se muestran las canciones descargadas.
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                Icons.Filled.CloudOff,
+                contentDescription = "Sin internet",
+                tint = Colores.Gris,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 
@@ -274,12 +290,15 @@ private fun EmptyState() {
 
 @Composable
 private fun VideoCard(item: PlayableItem, isCurrent: Boolean, onClick: () -> Unit) {
-    val thumbnail = item.thumbnail
+    val thumbnail = item.thumbnailModel
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "escalaTarjeta")
     Column(
         Modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .safeClickable(onClick, onPressedChange = { pressed = it })
             .semantics { contentDescription = item.title }
     ) {
         Box(
@@ -388,7 +407,7 @@ internal fun PlayerSurface(item: PlayableItem, hasVideo: Boolean, player: Player
         )
     } else {
         AsyncImage(
-            model = item.thumbnail,
+            model = item.thumbnailModel,
             contentDescription = item.title,
             contentScale = ContentScale.Fit,
             modifier = modifier,
@@ -436,7 +455,7 @@ internal fun RoundButton(
             .size(size)
             .clip(CircleShape)
             .background(background)
-            .clickable(onClick = onClick)
+            .safeClickable(onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {

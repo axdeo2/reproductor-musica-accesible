@@ -1,5 +1,6 @@
 package app.mimusica
 
+import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
@@ -20,10 +21,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import app.mimusica.data.toPlayable
+import app.mimusica.playback.PlaybackService
 import app.mimusica.playback.SimplePlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import app.mimusica.ui.caregiver.CaregiverScreen
 import app.mimusica.ui.home.HomeScreen
 import app.mimusica.ui.theme.PaletaClara
@@ -47,13 +51,9 @@ class MainActivity : ComponentActivity() {
         val library = container.localLibrary
         val recommendations = container.recommendations
         val connectivity = container.connectivity
-        player = SimplePlayer(
-            context = this,
-            scope = lifecycleScope,
-            online = container.onlineStreams,
-            hasInternet = { connectivity.isOnline.value },
-            offlineFallback = { library.items.value.map { it.toPlayable(library) } },
-        )
+        player = container.player
+        container.volumeLimiter.enforce() // crea el limitador y aplica el límite al abrir
+        var restoreTried = false
 
         setContent {
             val dark by container.childSettings.darkTheme.collectAsState()
@@ -63,6 +63,9 @@ class MainActivity : ComponentActivity() {
                 var fullscreen by rememberSaveable { mutableStateOf(false) }
                 val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val saved by library.items.collectAsState()
+                val folderItems by container.folderLibrary.items.collectAsState()
+                val maxVolume by container.childSettings.maxVolumePercent.collectAsState()
+                LaunchedEffect(maxVolume) { container.volumeLimiter.enforce() }
                 val recs by recommendations.items.collectAsState()
                 val showRecs by container.childSettings.showRecommendations.collectAsState()
                 val hasInternet by connectivity.isOnline.collectAsState()
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(caregiver, showRecs, hasInternet) {
                     if (!caregiver) {
                         library.refresh()
+                        container.folderLibrary.refresh()
                         // Al volver el internet se actualiza "Para ti" y se prepara el PoToken
                         // para que la primera canción en línea no tenga que esperarlo.
                         if (hasInternet && showRecs) {
@@ -83,7 +87,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val downloaded = remember(saved) { saved.map { it.toPlayable(library) } }
+                // "En el celular": lo descargado con la app primero, luego la carpeta del celular.
+                val downloaded = remember(saved, folderItems) { saved.map { it.toPlayable(library) } + folderItems }
+
+                // Al abrir la app se deja lista (en pausa) la última canción, donde iba.
+                LaunchedEffect(downloaded, recs) {
+                    if (restoreTried || player.hasQueue) return@LaunchedEffect
+                    val id = container.playbackMemory.lastId ?: run { restoreTried = true; return@LaunchedEffect }
+                    val queue = when {
+                        downloaded.any { it.id == id } -> downloaded
+                        recs.any { it.id == id } && hasInternet -> recs
+                        else -> return@LaunchedEffect // quizás "Para ti" aún no cargó
+                    }
+                    restoreTried = true
+                    player.restore(queue, queue.indexOfFirst { it.id == id }, container.playbackMemory.lastPositionMs)
+                }
                 // Si una recomendación ya está guardada, se reproduce desde el celular.
                 // Sin internet solo se muestran las canciones descargadas.
                 val recommended = remember(recs, downloaded, showRecs, hasInternet) {
@@ -126,6 +144,7 @@ class MainActivity : ComponentActivity() {
                         onNext = player::next,
                         onPrevious = player::previous,
                         onOpenCaregiver = { caregiver = true },
+                        hasInternet = hasInternet,
                         fullscreen = fullscreen,
                         onFullscreenChange = { fullscreen = it },
                     )
@@ -173,6 +192,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var controller: ListenableFuture<MediaController>? = null
+
+    /** Conectarse al servicio de reproducción lo arranca (música con pantalla apagada). */
+    override fun onStart() {
+        super.onStart()
+        val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
+        controller = MediaController.Builder(this, token).buildAsync()
+    }
+
+    override fun onStop() {
+        // Si está sonando, Media3 mantiene el servicio en primer plano aunque se suelte.
+        controller?.let(MediaController::releaseFuture)
+        controller = null
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         // Al volver a la app se revisa de nuevo si hay internet.
@@ -181,7 +216,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         portraitRelease?.disable()
-        player.release()
+        // El reproductor NO se libera aquí: pertenece a la app y sigue sonando en segundo plano.
         super.onDestroy()
     }
 }

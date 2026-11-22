@@ -4,71 +4,83 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.os.Handler
-import android.os.Looper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
- * Indica si hay internet de verdad (red con acceso a internet VERIFICADO por Android, no solo
- * "conectado a un WiFi"). Solo observa el estado: no abre conexiones.
+ * ¿Hay internet de verdad? Combina dos fuentes:
+ *  1. Lo que informa Android (red predeterminada con internet verificado). Si dice que NO,
+ *     se marca sin internet al instante.
+ *  2. Una comprobación real ([probe], implementada en `online/`): si Android dice que sí, se
+ *     confirma pidiendo una respuesta mínima a Google, y se repite cada 15 s. Algunos
+ *     celulares siguen informando "conectado" con datos y WiFi apagados (error visto en
+ *     v0.3.1 y v0.4.1); la comprobación real lo detecta.
  *
- * El modo niña lo usa para mostrar únicamente lo descargado cuando no hay internet.
- *
- * Importante: al recibir `onLost` NO se vuelve a consultar `activeNetwork`, porque en ese
- * instante Android todavía puede devolver la red que se acaba de perder (era el error de
- * v0.3.1: con datos y WiFi apagados seguía mostrando "Para ti").
+ * Este archivo no abre conexiones: recibe la comprobación como función.
  */
-class ConnectivityMonitor(context: Context) {
+class ConnectivityMonitor(
+    context: Context,
+    private val probe: suspend () -> Boolean,
+) {
     private val cm = context.applicationContext.getSystemService(ConnectivityManager::class.java)
-    private val handler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val _isOnline = MutableStateFlow(currentlyOnline())
+    @Volatile
+    private var systemOnline = systemSaysOnline()
+
+    /** Empieza en lo que dice Android; la primera comprobación real lo corrige en segundos. */
+    private val _isOnline = MutableStateFlow(systemOnline)
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
-    /** Red predeterminada actual según el callback (null = ninguna). */
-    @Volatile
-    private var defaultNetwork: Network? = null
-
-    private val periodicCheck = object : Runnable {
-        override fun run() {
-            refresh()
-            handler.postDelayed(this, CHECK_EVERY_MS)
-        }
-    }
+    private var checkJob: Job? = null
 
     init {
         cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                defaultNetwork = network
-                // Aún no se sabe si tiene internet verificado: se espera onCapabilitiesChanged.
-            }
-
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                defaultNetwork = network
-                _isOnline.value = caps.hasInternet()
+                systemOnline = caps.hasInternet()
+                refresh()
             }
 
             override fun onLost(network: Network) {
-                if (defaultNetwork == null || defaultNetwork == network) defaultNetwork = null
-                _isOnline.value = false
+                systemOnline = false
+                refresh()
             }
 
             override fun onUnavailable() {
-                defaultNetwork = null
-                _isOnline.value = false
+                systemOnline = false
+                refresh()
             }
         })
-        handler.postDelayed(periodicCheck, CHECK_EVERY_MS)
+        scope.launch {
+            while (isActive) {
+                refresh()
+                delay(CHECK_EVERY_MS)
+            }
+        }
     }
 
-    /** Vuelve a consultar el estado (al volver a la app y cada [CHECK_EVERY_MS] por seguridad). */
+    /** Vuelve a comprobar ahora (al volver a la app, al cambiar la red, etc.). */
     fun refresh() {
-        _isOnline.value = currentlyOnline()
+        if (!systemOnline && !systemSaysOnline()) {
+            checkJob?.cancel()
+            _isOnline.value = false
+            return
+        }
+        if (checkJob?.isActive == true) return
+        checkJob = scope.launch {
+            _isOnline.value = probe()
+        }
     }
 
-    private fun currentlyOnline(): Boolean {
+    private fun systemSaysOnline(): Boolean {
         val network = cm.activeNetwork ?: return false
         return cm.getNetworkCapabilities(network)?.hasInternet() == true
     }
@@ -78,6 +90,6 @@ class ConnectivityMonitor(context: Context) {
             hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
     private companion object {
-        const val CHECK_EVERY_MS = 10_000L
+        const val CHECK_EVERY_MS = 15_000L
     }
 }

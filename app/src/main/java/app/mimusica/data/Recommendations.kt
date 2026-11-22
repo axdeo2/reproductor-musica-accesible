@@ -37,8 +37,29 @@ class ChildSettings(context: Context) {
         _darkTheme.value = value
     }
 
+    /** Volumen máximo permitido (porcentaje del volumen del celular). 100 = sin límite. */
+    private val _maxVolumePercent = MutableStateFlow(prefs.getInt(KEY_MAX_VOL, 100))
+    val maxVolumePercent: StateFlow<Int> = _maxVolumePercent.asStateFlow()
+
+    fun setMaxVolumePercent(value: Int) {
+        val v = value.coerceIn(10, 100)
+        prefs.edit().putInt(KEY_MAX_VOL, v).apply()
+        _maxVolumePercent.value = v
+    }
+
+    /** Carpeta del celular con videos/música descargados por otros medios (URI de SAF). */
+    private val _folderUri = MutableStateFlow(prefs.getString(KEY_FOLDER, null))
+    val folderUri: StateFlow<String?> = _folderUri.asStateFlow()
+
+    fun setFolderUri(value: String?) {
+        prefs.edit().putString(KEY_FOLDER, value).apply()
+        _folderUri.value = value
+    }
+
     private companion object {
         const val KEY_RECS = "mostrar_para_ti"
         const val KEY_DARK = "tema_oscuro"
+        const val KEY_MAX_VOL = "volumen_maximo"
+        const val KEY_FOLDER = "carpeta_uri"
     }
 }
