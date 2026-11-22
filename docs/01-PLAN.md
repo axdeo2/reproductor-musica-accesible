@@ -39,14 +39,14 @@ otra app**, usando los mismos gestos y la misma "forma" de pantalla que ya conoc
 
 | Fase | Entregable | Criterio de "terminado" |
 |---|---|---|
-| **0. Base** | Proyecto Android (Gradle, Compose, Media3), CI en GitHub Actions que genera la APK debug | `./gradlew assembleDebug` pasa en CI y la APK queda como artefacto descargable |
-| **1. Biblioteca** | Elegir carpeta (SAF), escanear videos, generar miniaturas, pantalla Inicio | Se ven las miniaturas de la carpeta real del celular en < 2 s después del primer escaneo |
-| **2. Reproductor** | Pantalla Ver video vertical + lista "A continuación", reproducción automática, repetir | Tocar una miniatura reproduce; al terminar sigue el siguiente; tocar otro de la lista cambia |
+| **0. Base** ✅ | Proyecto Android (Gradle, Compose, Media3), CI en GitHub Actions que genera la APK debug | `./gradlew assembleDebug` pasa en CI y la APK queda como artefacto descargable |
+| **1. Biblioteca** 🟡 Inicio listo; falta carpeta SAF | Elegir carpeta (SAF), escanear videos, generar miniaturas, pantalla Inicio | Se ven las miniaturas de la carpeta real del celular en < 2 s después del primer escaneo |
+| **2. Reproductor** 🟡 listo; falta sonar con pantalla apagada | Pantalla Ver video vertical + lista "A continuación", reproducción automática, repetir | Tocar una miniatura reproduce; al terminar sigue el siguiente; tocar otro de la lista cambia |
 | **3. Pantalla completa** ✅ v0.4.0 | Rotación horizontal, modo inmersivo, controles que aparecen y se ocultan | Girar el celular entra a pantalla completa sin cortar el audio; volver a vertical regresa |
-| **4. Accesibilidad** | Botones grandes, anti-toques accidentales, volumen máximo, retroalimentación háptica | Prueba con la niña: usa la app 15 min sin pedir ayuda |
-| **5. Zona del cuidador** | Acceso oculto + PIN, ajustes, persistencia | El cuidador cambia carpeta y volumen; la niña no encuentra la zona por accidente |
-| **5b. Zona de descargas** | Login con Google, biblioteca, "me gusta", descargas a almacenamiento local | El cuidador descarga una lista de "me gusta" y aparece en el modo niña con el celular en modo avión |
-| **6. Bloqueo kiosco** | Fijación de pantalla → luego Lock Task con Device Owner + app como "Inicio" | Botones Inicio y Recientes no hacen nada; solo el cuidador puede salir |
+| **4. Accesibilidad** 🟡 botones grandes listos | Botones grandes, anti-toques accidentales, volumen máximo, retroalimentación háptica | Prueba con la niña: usa la app 15 min sin pedir ayuda |
+| **5. Zona del cuidador** 🟡 falta PIN | Acceso oculto + PIN, ajustes, persistencia | El cuidador cambia carpeta y volumen; la niña no encuentra la zona por accidente |
+| **5b. Zona de descargas** ✅ (falta probar en celular) | Login con Google, biblioteca, "me gusta", descargas a almacenamiento local | El cuidador descarga una lista de "me gusta" y aparece en el modo niña con el celular en modo avión |
+| **6. Bloqueo kiosco** ✅ decidido | Fijación de pantalla de Android (opción A, sin código; ver [04](04-BLOQUEO-KIOSCO.md#4-decisión)) | Botones Inicio y Recientes no hacen nada; solo el cuidador puede salir con el PIN del celular |
 | **7. Pruebas con la usuaria** | Ajustes finos según observación (tamaños, colores, gestos que confunden) | Uso autónomo durante varios días seguidos |
 
 ## 5. Riesgos y mitigaciones

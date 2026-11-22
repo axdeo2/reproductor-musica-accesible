@@ -1,5 +1,8 @@
 # Evaluación: bloquear la app (modo kiosco)
 
+> **Decisión (22-nov-2026): se usa la opción A — fijación de pantalla de Android.** No requiere
+> código ni Device Owner. Las opciones B y C quedan documentadas solo como referencia.
+
 **Objetivo:** que la niña **no pueda salir** de la app con los botones del sistema
 (Inicio ●, Recientes ▢) ni con gestos, y que como máximo funcione **Atrás ◀** — que dentro de la
 app solo navega entre pantallas y en Inicio no hace nada.
@@ -101,13 +104,19 @@ Manifiesto: `KioskAdminReceiver` con `android.permission.BIND_DEVICE_ADMIN` y un
   (`clearDeviceOwnerApp`) para devolver el celular a la normalidad.
 - Documentar el PIN en un lugar seguro de la familia.
 
-## 4. Recomendación
+## 4. Decisión
 
-1. **Ahora (sin esperar a terminar la app):** usar la **opción A** con PIN. Cero riesgo y
-   resuelve el 90 % del problema.
-2. **Fase 6 del plan:** implementar **B + C** con caída automática a A si la app no es Device
-   Owner. Así la misma APK funciona en ambos escenarios.
-3. **No** usar apps de kiosco de terceros ni servicios de accesibilidad para esto.
+Se usa la **opción A** (fijación de pantalla con PIN). Pasos para el cuidador:
+
+1. **Ajustes → Seguridad → Fijar app** (según la marca: "Fijar pantalla", "Anclar ventana",
+   "App pinning"; si no aparece, buscar "fijar" en el buscador de Ajustes). Activarla.
+2. Activar **"Pedir PIN / patrón para dejar de fijar"**.
+3. Abrir la app Música → botón **Recientes ▢** (o deslizar hacia arriba y mantener) → tocar el
+   ícono de la app arriba de su ventana → **Fijar**.
+4. Para salir: mantener **Atrás + Recientes** a la vez (o deslizar hacia arriba y mantener, con
+   navegación por gestos) e ingresar el PIN del celular.
+
+Limitación: después de reiniciar el celular hay que volver a fijar la app.
 
 ## 5. Qué ve la niña en cada caso
 
