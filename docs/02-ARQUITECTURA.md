@@ -158,7 +158,7 @@ a pantalla completa; girar a vertical sale.
 
 ## 9. Buscador (v0.6.0)
 
-- Barra de búsqueda en la parte inferior de Inicio (`ui/home/SearchBar.kt`), 64 dp de alto.
+- Barra de búsqueda en la parte superior de Inicio, debajo del logo (`ui/home/SearchBar.kt`), 64 dp de alto.
   Busca mientras se escribe; Atrás borra la búsqueda.
 - **Local** (`data/LocalSearchIndex`): normaliza títulos y artistas una sola vez (sin tildes,
   minúsculas); todas las palabras deben aparecer, en cualquier orden; primero los títulos que

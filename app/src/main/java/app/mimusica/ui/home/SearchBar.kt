@@ -31,7 +31,7 @@ import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
 
 /**
- * Buscador en la parte inferior de Inicio. Busca mientras se escribe (sin botón "Buscar").
+ * Buscador en la parte superior de Inicio (debajo del logo). Busca mientras se escribe (sin botón "Buscar").
  * Alto de 64 dp y botón de borrar grande, según las reglas de accesibilidad.
  */
 @Composable
@@ -41,7 +41,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier
         modifier
             .fillMaxWidth()
             .background(Colores.Fondo)
-            .padding(horizontal = Dimens.Separacion, vertical = 8.dp)
+            .padding(start = Dimens.Separacion, end = Dimens.Separacion, bottom = 8.dp)
             .height(Dimens.TocableMinimo)
             .clip(RoundedCornerShape(32.dp))
             .background(Colores.Superficie),

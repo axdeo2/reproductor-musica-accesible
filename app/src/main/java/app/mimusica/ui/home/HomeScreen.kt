@@ -118,7 +118,7 @@ fun HomeScreen(
     /** Pantalla completa (horizontal). */
     fullscreen: Boolean,
     onFullscreenChange: (Boolean) -> Unit,
-    /** Texto del buscador (abajo). Si no está vacío, se muestran resultados en vez del feed. */
+    /** Texto del buscador (arriba). Si no está vacío, se muestran resultados en vez del feed. */
     query: String,
     onQueryChange: (String) -> Unit,
     /** Resultados entre las canciones de la app (al instante). */
@@ -153,6 +153,8 @@ fun HomeScreen(
             .safeDrawingPadding()
     ) {
         TopBar(onOpenCaregiver, hasInternet)
+        // Buscador arriba, como YouTube.
+        SearchBar(query, onQueryChange)
 
         val currentId = current?.id
         if (current != null) {
@@ -178,7 +180,6 @@ fun HomeScreen(
                 }
             }
         }
-        SearchBar(query, onQueryChange)
     }
 }
 
