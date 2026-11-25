@@ -173,7 +173,20 @@ class MainActivity : ComponentActivity() {
                         loadState = loadState,
                         hasVideo = hasVideo,
                         player = player.player,
-                        onPlay = player::playQueue,
+                        onPlay = { queue, index ->
+                            if (query.isBlank()) player.playQueue(queue, index)
+                            else {
+                                // Desde una búsqueda: primero los resultados y luego el resto de
+                                // las canciones en orden aleatorio, para que "siguiente" nunca
+                                // repita la misma canción cuando hay pocos resultados.
+                                val inQueue = queue.mapTo(HashSet()) { it.id }
+                                val rest = (downloaded + recommended)
+                                    .distinctBy { it.id }
+                                    .filterNot { it.id in inQueue }
+                                    .shuffled()
+                                player.playQueue(queue + rest, index)
+                            }
+                        },
                         onTogglePlay = player::togglePlayPause,
                         onNext = player::next,
                         onPrevious = player::previous,
