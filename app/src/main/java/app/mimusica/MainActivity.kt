@@ -22,7 +22,12 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.launch
+import app.mimusica.data.LocalSearchIndex
+import app.mimusica.data.PlayableItem
 import app.mimusica.data.toPlayable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import app.mimusica.playback.PlaybackService
 import app.mimusica.playback.SimplePlayer
 import androidx.media3.session.MediaController
@@ -126,6 +131,35 @@ class MainActivity : ComponentActivity() {
                     wasFullscreen = fullscreen
                 }
 
+                // ---- Buscador en tiempo real ----
+                var query by rememberSaveable { mutableStateOf("") }
+                // Índice preparado una sola vez por cada cambio de canciones (no por tecla).
+                val searchIndex = remember(recommended, downloaded) { LocalSearchIndex(downloaded + recommended) }
+                var searchLocal by remember { mutableStateOf(emptyList<PlayableItem>()) }
+                var searchOnline by remember { mutableStateOf(emptyList<PlayableItem>()) }
+                var searchingOnline by remember { mutableStateOf(false) }
+                LaunchedEffect(query, searchIndex) {
+                    if (query.isBlank()) { searchLocal = emptyList(); return@LaunchedEffect }
+                    delay(60) // agrupa teclas muy seguidas; se cancela sola si llega otra
+                    searchLocal = withContext(Dispatchers.Default) { searchIndex.search(query) }
+                }
+                LaunchedEffect(query, hasInternet, showRecs) {
+                    searchOnline = emptyList()
+                    val q = query.trim()
+                    if (q.length < 2 || !hasInternet || !showRecs) { searchingOnline = false; return@LaunchedEffect }
+                    searchingOnline = true
+                    try {
+                        delay(400) // espera a que deje de escribir; una tecla nueva cancela esta búsqueda
+                        val byId = downloaded.associateBy { it.id }
+                        val local = searchLocal.map { it.id }.toSet()
+                        searchOnline = runCatching { container.onlineSearch.search(q) }.getOrDefault(emptyList())
+                            .filterNot { it.id in local }
+                            .map { byId[it.id] ?: it }
+                    } finally {
+                        searchingOnline = false
+                    }
+                }
+
                 if (caregiver) {
                     CaregiverScreen(container, onExit = { caregiver = false })
                 } else {
@@ -147,6 +181,11 @@ class MainActivity : ComponentActivity() {
                         hasInternet = hasInternet,
                         fullscreen = fullscreen,
                         onFullscreenChange = { fullscreen = it },
+                        query = query,
+                        onQueryChange = { query = it },
+                        searchLocal = searchLocal,
+                        searchOnline = searchOnline,
+                        searchingOnline = searchingOnline,
                     )
                 }
             }

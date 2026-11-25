@@ -155,3 +155,15 @@ a pantalla completa; girar a vertical sale.
   `coil-video` (cuadro del video).
 - **Anti-toques**: `ui/components/SafeClickable` (al soltar, tolerancia 24 dp, sin multitoque,
   anti-rebote 600 ms, vibración).
+
+## 9. Buscador (v0.6.0)
+
+- Barra de búsqueda en la parte inferior de Inicio (`ui/home/SearchBar.kt`), 64 dp de alto.
+  Busca mientras se escribe; Atrás borra la búsqueda.
+- **Local** (`data/LocalSearchIndex`): normaliza títulos y artistas una sola vez (sin tildes,
+  minúsculas); todas las palabras deben aparecer, en cualquier orden; primero los títulos que
+  empiezan con lo buscado. Se calcula en `Dispatchers.Default` con 60 ms de agrupación de teclas.
+- **YouTube** (`online/SearchRepository`, filtro "Videos"): solo con internet y "Para ti"
+  encendido. Espera 400 ms sin escribir, cancela búsquedas viejas, caché de 20 búsquedas,
+  20 resultados, miniaturas en paralelo guardadas en `cacheDir/busqueda` (máx. 300).
+  Probado en PC: 20 resultados en ~1,5 s.

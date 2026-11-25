@@ -5,6 +5,7 @@ import app.mimusica.data.ChildSettings
 import app.mimusica.data.ConnectivityMonitor
 import app.mimusica.data.FolderLibrary
 import app.mimusica.data.LocalLibrary
+import app.mimusica.data.OnlineSearch
 import app.mimusica.data.PlaybackMemoryStore
 import app.mimusica.data.toPlayable
 import app.mimusica.playback.SimplePlayer
@@ -16,6 +17,7 @@ import app.mimusica.online.InternetProbe
 import app.mimusica.online.OnlineSession
 import app.mimusica.online.OnlineStreamResolver
 import app.mimusica.online.RecommendationsRepository
+import app.mimusica.online.SearchRepository
 import app.mimusica.online.potoken.AppTokenProvider
 import app.mimusica.playback.OnlineStreams
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +49,7 @@ class AppContainer(context: Context) {
         RecommendationsRepository(online, appContext.cacheDir, childSettings)
     }
     val onlineStreams: OnlineStreams by lazy { OnlineStreamResolver(online) }
+    val onlineSearch: OnlineSearch by lazy { SearchRepository(online, appContext.cacheDir) }
 
     val playbackMemory = PlaybackMemoryStore(appContext)
     val folderLibrary: FolderLibrary by lazy { FolderLibrary(appContext, childSettings) }

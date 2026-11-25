@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -116,6 +118,14 @@ fun HomeScreen(
     /** Pantalla completa (horizontal). */
     fullscreen: Boolean,
     onFullscreenChange: (Boolean) -> Unit,
+    /** Texto del buscador (abajo). Si no está vacío, se muestran resultados en vez del feed. */
+    query: String,
+    onQueryChange: (String) -> Unit,
+    /** Resultados entre las canciones de la app (al instante). */
+    searchLocal: List<PlayableItem>,
+    /** Resultados de YouTube (solo con internet y "Para ti" encendido). */
+    searchOnline: List<PlayableItem>,
+    searchingOnline: Boolean,
 ) {
     if (fullscreen && current != null) {
         FullscreenPlayer(
@@ -132,8 +142,9 @@ fun HomeScreen(
         return
     }
 
-    // En Inicio, Atrás no hace nada: así nunca sale de la app con ese botón.
-    BackHandler(enabled = true) { }
+    // En Inicio, Atrás no sale de la app: si hay una búsqueda, la borra; si no, no hace nada.
+    BackHandler(enabled = true) { if (query.isNotEmpty()) onQueryChange("") }
+    val searching = query.isNotBlank()
 
     Column(
         Modifier
@@ -150,7 +161,9 @@ fun HomeScreen(
         }
 
         Box(Modifier.weight(1f)) {
-            if (recommended.isEmpty() && downloaded.isEmpty()) {
+            if (searching) {
+                SearchResults(searchLocal, searchOnline, searchingOnline, currentId, onPlay)
+            } else if (recommended.isEmpty() && downloaded.isEmpty()) {
                 EmptyState()
             } else {
                 LazyVerticalGrid(
@@ -162,6 +175,39 @@ fun HomeScreen(
                     section("para-ti", Icons.Filled.AutoAwesome, "Para ti", recommended, currentId, onPlay)
                     section("celular", Icons.Filled.PhoneAndroid, "En el celular", downloaded, currentId, onPlay)
                     endlessTail(recommended + downloaded, currentId, onPlay)
+                }
+            }
+        }
+        SearchBar(query, onQueryChange)
+    }
+}
+
+@Composable
+private fun SearchResults(
+    local: List<PlayableItem>,
+    online: List<PlayableItem>,
+    loadingOnline: Boolean,
+    currentId: String?,
+    onPlay: (List<PlayableItem>, Int) -> Unit,
+) {
+    if (local.isEmpty() && online.isEmpty() && !loadingOnline) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.SearchOff, contentDescription = "Sin resultados", tint = Colores.Gris, modifier = Modifier.size(96.dp))
+        }
+        return
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 300.dp),
+        contentPadding = PaddingValues(Dimens.Separacion),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.Separacion),
+        verticalArrangement = Arrangement.spacedBy(Dimens.Separacion),
+    ) {
+        section("buscar-celular", Icons.Filled.PhoneAndroid, "En el celular", local, currentId, onPlay)
+        section("buscar-youtube", Icons.Filled.Search, "En YouTube", online, currentId, onPlay)
+        if (loadingOnline) {
+            item(key = "buscando", span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Colores.Rojo, modifier = Modifier.size(48.dp))
                 }
             }
         }
