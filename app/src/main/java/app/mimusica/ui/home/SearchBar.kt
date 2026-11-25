@@ -31,19 +31,16 @@ import app.mimusica.ui.theme.Colores
 import app.mimusica.ui.theme.Dimens
 
 /**
- * Buscador en la parte superior de Inicio (debajo del logo). Busca mientras se escribe (sin botón "Buscar").
- * Alto de 64 dp y botón de borrar grande, según las reglas de accesibilidad.
+ * Buscador compacto en la fila del logo (arriba), para no quitarle altura al video.
+ * Busca mientras se escribe (sin botón "Buscar"). Quien lo usa ([modifier]) decide el ancho.
  */
 @Composable
 fun SearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val focus = LocalFocusManager.current
     Row(
         modifier
-            .fillMaxWidth()
-            .background(Colores.Fondo)
-            .padding(start = Dimens.Separacion, end = Dimens.Separacion, bottom = 8.dp)
-            .height(Dimens.TocableMinimo)
-            .clip(RoundedCornerShape(32.dp))
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
             .background(Colores.Superficie),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -51,7 +48,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier
             Icons.Filled.Search,
             contentDescription = null,
             tint = Colores.Gris,
-            modifier = Modifier.padding(start = 20.dp, end = 12.dp).size(28.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 8.dp).size(24.dp),
         )
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
@@ -75,14 +72,14 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier
         if (query.isNotEmpty()) {
             Box(
                 Modifier
-                    .size(Dimens.TocableMinimo)
+                    .size(48.dp)
                     .safeClickable(onClick = {
                         onQueryChange("")
                         focus.clearFocus()
                     }),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Close, contentDescription = "Borrar búsqueda", tint = Colores.Texto, modifier = Modifier.size(28.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Borrar búsqueda", tint = Colores.Texto, modifier = Modifier.size(24.dp))
             }
         }
     }

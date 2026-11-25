@@ -152,9 +152,7 @@ fun HomeScreen(
             .background(Colores.Fondo)
             .safeDrawingPadding()
     ) {
-        TopBar(onOpenCaregiver, hasInternet)
-        // Buscador arriba, como YouTube.
-        SearchBar(query, onQueryChange)
+        TopBar(onOpenCaregiver, hasInternet, query, onQueryChange)
 
         val currentId = current?.id
         if (current != null) {
@@ -270,7 +268,7 @@ private fun LazyGridScope.section(
 }
 
 @Composable
-private fun TopBar(onOpenCaregiver: () -> Unit, hasInternet: Boolean) {
+private fun TopBar(onOpenCaregiver: () -> Unit, hasInternet: Boolean, query: String, onQueryChange: (String) -> Unit) {
     val descripcionLogo = stringResource(R.string.cd_app_logo)
     val open by rememberUpdatedState(onOpenCaregiver)
     Row(
@@ -326,6 +324,9 @@ private fun TopBar(onOpenCaregiver: () -> Unit, hasInternet: Boolean) {
             }
             AppLogo(ancho = 40.dp)
         }
+        // Buscador en la misma fila que el logo, para no quitarle altura al video.
+        Spacer(Modifier.width(8.dp))
+        SearchBar(query, onQueryChange, Modifier.weight(1f))
         if (!hasInternet) {
             // Sin internet: solo se muestran las canciones descargadas.
             Spacer(Modifier.width(8.dp))
