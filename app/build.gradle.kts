@@ -49,8 +49,8 @@ android {
         applicationId = "app.mimusica"
         minSdk = 26
         targetSdk = 37
-        versionCode = 16
-        versionName = "0.6.4"
+        versionCode = 17
+        versionName = "0.6.5"
     }
 
     signingConfigs {

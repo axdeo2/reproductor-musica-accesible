@@ -89,10 +89,21 @@ class SimplePlayer(
     val repeatOne: StateFlow<Boolean> = _repeatOne.asStateFlow()
 
     fun toggleRepeatOne() {
-        val on = !_repeatOne.value
-        _repeatOne.value = on
-        // Solo la canción actual está cargada en ExoPlayer: REPEAT_MODE_ONE la repite sin fin.
-        player.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        _repeatOne.value = !_repeatOne.value
+        // No se usa REPEAT_MODE_ONE de ExoPlayer: con video y audio unidos (MergingMediaSource)
+        // no siempre repetía. El bucle se hace a mano al terminar la canción (ver STATE_ENDED).
+        player.repeatMode = Player.REPEAT_MODE_OFF
+    }
+
+    /** Al terminar una canción: si el bucle está activo vuelve a empezar; si no, la siguiente. */
+    private fun onSongEnded() {
+        if (_repeatOne.value) {
+            player.seekTo(0)
+            player.playWhenReady = true
+            if (player.playbackState == Player.STATE_IDLE) player.prepare()
+        } else {
+            next()
+        }
     }
 
     /** true si hay una cola cargada (para no reemplazarla al restaurar). */
@@ -139,7 +150,7 @@ class SimplePlayer(
                         prefetchNext()
                     }
                     Player.STATE_BUFFERING -> startBufferWatch()
-                    Player.STATE_ENDED -> next()
+                    Player.STATE_ENDED -> onSongEnded()
                     else -> Unit
                 }
             }
