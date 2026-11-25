@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                 val isPlaying by player.isPlaying.collectAsState()
                 val loadState by player.loadState.collectAsState()
                 val hasVideo by player.hasVideo.collectAsState()
+                val repeatOne by player.repeatOne.collectAsState()
 
                 LaunchedEffect(caregiver, showRecs, hasInternet) {
                     if (!caregiver) {
@@ -199,6 +200,8 @@ class MainActivity : ComponentActivity() {
                         searchLocal = searchLocal,
                         searchOnline = searchOnline,
                         searchingOnline = searchingOnline,
+                        repeatOne = repeatOne,
+                        onToggleRepeat = player::toggleRepeatOne,
                     )
                 }
             }

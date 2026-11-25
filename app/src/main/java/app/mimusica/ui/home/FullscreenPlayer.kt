@@ -55,6 +55,8 @@ fun FullscreenPlayer(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExit: () -> Unit,
+    repeatOne: Boolean,
+    onToggleRepeat: () -> Unit,
 ) {
     BackHandler(onBack = onExit)
 
@@ -108,6 +110,14 @@ fun FullscreenPlayer(
                     )
                     RoundButton(Icons.Filled.SkipNext, "Siguiente", Color.Black.copy(alpha = 0.55f), Dimens.TocableMinimo, act(onNext))
                 }
+                // Repetir la canción: mismo lugar que en la vista normal.
+                RepeatButton(
+                    on = repeatOne,
+                    onToggle = act(onToggleRepeat),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp),
+                )
                 // Salir de pantalla completa: mismo lugar que el botón para entrar.
                 RoundButton(
                     icon = Icons.Filled.FullscreenExit,

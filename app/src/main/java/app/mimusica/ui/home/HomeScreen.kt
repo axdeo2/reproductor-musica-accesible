@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
@@ -126,6 +128,9 @@ fun HomeScreen(
     /** Resultados de YouTube (solo con internet y "Para ti" encendido). */
     searchOnline: List<PlayableItem>,
     searchingOnline: Boolean,
+    /** Repetir la canción actual en bucle. */
+    repeatOne: Boolean,
+    onToggleRepeat: () -> Unit,
 ) {
     if (fullscreen && current != null) {
         FullscreenPlayer(
@@ -138,6 +143,8 @@ fun HomeScreen(
             onNext = onNext,
             onPrevious = onPrevious,
             onExit = { onFullscreenChange(false) },
+            repeatOne = repeatOne,
+            onToggleRepeat = onToggleRepeat,
         )
         return
     }
@@ -156,7 +163,7 @@ fun HomeScreen(
 
         val currentId = current?.id
         if (current != null) {
-            NowPlaying(current, hasVideo, loadState, player, onFullscreen = { onFullscreenChange(true) })
+            NowPlaying(current, hasVideo, loadState, player, onFullscreen = { onFullscreenChange(true) }, repeatOne = repeatOne, onToggleRepeat = onToggleRepeat)
             Controls(isPlaying, onTogglePlay, onNext, onPrevious)
         }
 
@@ -441,6 +448,8 @@ private fun NowPlaying(
     loadState: LoadState,
     player: Player,
     onFullscreen: () -> Unit,
+    repeatOne: Boolean,
+    onToggleRepeat: () -> Unit,
 ) {
     Box(
         Modifier
@@ -451,6 +460,12 @@ private fun NowPlaying(
     ) {
         PlayerSurface(item, hasVideo, player, Modifier.fillMaxSize())
         LoadingOverlay(loadState)
+        // Repetir la canción: botón pequeño abajo a la izquierda.
+        RepeatButton(
+            on = repeatOne,
+            onToggle = onToggleRepeat,
+            modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+        )
         // Botón de pantalla completa abajo a la derecha, como en YouTube.
         RoundButton(
             icon = Icons.Filled.Fullscreen,
@@ -514,6 +529,20 @@ private fun Controls(
         )
         RoundButton(Icons.Filled.SkipNext, "Siguiente", Colores.Superficie, Dimens.TocableMinimo, onNext, tint = Colores.Texto)
     }
+}
+
+/** Botón pequeño para repetir la canción actual. Rojo con "1" cuando está activo. */
+@Composable
+internal fun RepeatButton(on: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    RoundButton(
+        icon = if (on) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+        description = if (on) "Repetir esta canción: activado" else "Repetir esta canción",
+        background = Color.Black.copy(alpha = 0.55f),
+        size = 48.dp,
+        onClick = onToggle,
+        modifier = modifier,
+        tint = if (on) Colores.Rojo else Colores.Blanco.copy(alpha = 0.85f),
+    )
 }
 
 @Composable

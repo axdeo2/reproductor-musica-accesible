@@ -84,6 +84,17 @@ class SimplePlayer(
         .setWakeMode(C.WAKE_MODE_NETWORK)
         .build()
 
+    /** Repetir la canción actual en bucle (botón pequeño sobre el video). */
+    private val _repeatOne = MutableStateFlow(false)
+    val repeatOne: StateFlow<Boolean> = _repeatOne.asStateFlow()
+
+    fun toggleRepeatOne() {
+        val on = !_repeatOne.value
+        _repeatOne.value = on
+        // Solo la canción actual está cargada en ExoPlayer: REPEAT_MODE_ONE la repite sin fin.
+        player.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
     /** true si hay una cola cargada (para no reemplazarla al restaurar). */
     val hasQueue: Boolean get() = queue.isNotEmpty()
     private var saveJob: Job? = null
